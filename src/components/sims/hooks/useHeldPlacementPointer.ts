@@ -101,7 +101,7 @@ export function useHeldPlacementPointer({
           const found = deskId ? placedItems.find(p => p.instanceId === deskId) : undefined;
           if (found) {
             matchedDesk = found;
-            targetSurfaceY = getTableSurfaceYUnder(
+            const deskSurf = getTableSurfaceYUnder(
               found.gridX,
               found.gridZ,
               1,
@@ -109,8 +109,12 @@ export function useHeldPlacementPointer({
               placedItems,
               catalog,
               itemMeshesRef.current,
-              found.instanceId
-            ).surfaceY;
+              found.instanceId,
+              movingInstanceIdRef.current,
+              roomWidth,
+              roomLength
+            );
+            targetSurfaceY = deskSurf.surfaceY > 0 ? deskSurf.surfaceY : Math.max(pt.y, 0.74);
           }
         }
       }
@@ -193,7 +197,9 @@ export function useHeldPlacementPointer({
         catalog,
         itemMeshesRef.current,
         matchedDesk?.instanceId,
-        movingInstanceIdRef.current
+        movingInstanceIdRef.current,
+        roomWidth,
+        roomLength
       );
       if (surfaceRes.surfaceY > 0) {
         targetSurfaceY = surfaceRes.surfaceY;

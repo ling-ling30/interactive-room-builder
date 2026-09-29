@@ -11,6 +11,7 @@ interface UseModelPreviewSceneParams {
   product: SimsProduct;
   activeColor: string;
   isGridOn: boolean;
+  hideGroundShadow?: boolean;
   autoRotateRef: MutableRefObject<boolean>;
   isWireframeRef: MutableRefObject<boolean>;
   orbit: PreviewOrbit;
@@ -26,6 +27,7 @@ export function useModelPreviewScene({
   product,
   activeColor,
   isGridOn,
+  hideGroundShadow = false,
   autoRotateRef,
   isWireframeRef,
   orbit,
@@ -254,6 +256,13 @@ export function useModelPreviewScene({
       gridHelperRef.current.visible = isGridOn;
     }
   }, [isGridOn]);
+
+  // Toggle ground contact shadow visibility
+  useEffect(() => {
+    if (shadowMeshRef.current) {
+      shadowMeshRef.current.visible = !hideGroundShadow;
+    }
+  }, [hideGroundShadow]);
 
   return { isLoading, triangleCount, applyWireframe, resetCamera };
 }

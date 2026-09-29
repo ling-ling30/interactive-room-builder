@@ -43,7 +43,33 @@ export function usePlacedItemsSync({
       }
     });
 
+    const isDeskPad = (prod: SimsProduct) =>
+      prod.id === 'acc-felt-deskpad' || prod.id.includes('mat') || prod.id.includes('pad') ||
+      prod.name.toLowerCase().includes('mat') || prod.name.toLowerCase().includes('pad');
+
+    // Partition items into 3 deterministic passes:
+    // Pass 1: Base floor furniture (desks, tables, chairs, rugs, cabinets, plants)
+    // Pass 2: Desk mats / pads
+    // Pass 3: Surface accessories (keyboards, mice, monitors, lamps, mugs)
+    const baseItems: PlacedFurniture[] = [];
+    const matItems: PlacedFurniture[] = [];
+    const surfaceItems: PlacedFurniture[] = [];
+
     placedItems.forEach(item => {
+      const prod = catalog.find(p => p.id === item.productId);
+      if (!prod) return;
+      if (!isSurfaceItem(prod)) {
+        baseItems.push(item);
+      } else if (isDeskPad(prod)) {
+        matItems.push(item);
+      } else {
+        surfaceItems.push(item);
+      }
+    });
+
+    const orderedItems = [...baseItems, ...matItems, ...surfaceItems];
+
+    orderedItems.forEach(item => {
       const product = catalog.find(p => p.id === item.productId);
       if (!product) return;
 
@@ -80,6 +106,7 @@ export function usePlacedItemsSync({
       const fp = getEffectiveFootprint(product, safeRotation);
 
       // Dynamically measure physical desk surface height so accessories never sink
+      // Because desks are placed in Pass 1, deskMesh is guaranteed to be in world position!
       if (isSurfaceItem(product)) {
         const detected = getTableSurfaceYUnder(
           safeGridX,
@@ -90,7 +117,9 @@ export function usePlacedItemsSync({
           catalog,
           map,
           item.mountedOnDeskId,
-          item.instanceId
+          item.instanceId,
+          roomWidth,
+          roomLength
         );
         if (detected.surfaceY > 0) {
           safeSurfaceY = detected.surfaceY;
@@ -101,6 +130,7 @@ export function usePlacedItemsSync({
 
       group.position.set(worldPos.x, safeSurfaceY, worldPos.z);
       group.rotation.y = (safeRotation * Math.PI) / 180;
+      group.updateMatrixWorld(true);
 
       setSelectionEmissive(group, selectedInstanceIds.includes(item.instanceId));
     });

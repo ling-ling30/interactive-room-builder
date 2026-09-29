@@ -268,6 +268,11 @@ export function findNearestCenterSnap(
  * Performs a 2D bounding-box overlap test to locate any desk beneath the given target coordinates.
  * Accurately supports any desk dimensions (e.g. 2x2, 3x2, 4x2) and rotations.
  */
+/**
+ * Performs a 2D bounding-box overlap test to locate any desk beneath the given target coordinates.
+ * Accurately supports any desk dimensions (e.g. 2x2, 3x2, 4x2), rotations, actual physical model bounds,
+ * and 3D mesh geometry in world space.
+ */
 export function findDeskUnder(
   placedItems: PlacedFurniture[],
   catalog: SimsProduct[],
@@ -275,22 +280,82 @@ export function findDeskUnder(
   targetZ: number,
   width = 1,
   depth = 1,
-  excludeInstanceId?: string | null
+  excludeInstanceId?: string | null,
+  itemMeshes?: Map<string, THREE.Group> | null,
+  roomWidth = 6,
+  roomLength = 6
 ): PlacedFurniture | undefined {
-  return placedItems.find(item => {
-    if (excludeInstanceId && item.instanceId === excludeInstanceId) return false;
+  const targetCenterX = targetX + width / 2;
+  const targetCenterZ = targetZ + depth / 2;
+  const targetWorldPos = gridToWorld(targetX, targetZ, width, depth, roomWidth, roomLength);
+
+  let bestMatch: PlacedFurniture | undefined = undefined;
+  let minDistance = Infinity;
+
+  for (const item of placedItems) {
+    if (excludeInstanceId && item.instanceId === excludeInstanceId) continue;
     const prod = catalog.find(p => p.id === item.productId);
-    if (prod?.category !== 'desks') return false;
+    if (prod?.category !== 'desks') continue;
 
+    // 1. Direct physical 3D mesh bounding test in world space if mesh is available
+    if (itemMeshes) {
+      const deskMesh = itemMeshes.get(item.instanceId);
+      if (deskMesh && deskMesh.visible) {
+        deskMesh.updateWorldMatrix(true, true);
+        const box = new THREE.Box3().setFromObject(deskMesh);
+        if (isFinite(box.min.x) && isFinite(box.max.x)) {
+          // Generous 15cm border tolerance around tabletop edges for edge accessories (mouse, lamp)
+          const tolerance = 0.15;
+          const isOverMesh =
+            targetWorldPos.x >= box.min.x - tolerance &&
+            targetWorldPos.x <= box.max.x + tolerance &&
+            targetWorldPos.z >= box.min.z - tolerance &&
+            targetWorldPos.z <= box.max.z + tolerance;
+
+          if (isOverMesh) {
+            const meshCenter = new THREE.Vector3();
+            box.getCenter(meshCenter);
+            const dist = Math.hypot(targetWorldPos.x - meshCenter.x, targetWorldPos.z - meshCenter.z);
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestMatch = item;
+            }
+            continue;
+          }
+        }
+      }
+    }
+
+    // 2. Physical and Footprint 2D grid bounding box overlap test
     const deskFp = getEffectiveFootprint(prod, item.rotation);
-    const dW = deskFp.width;
-    const dD = deskFp.depth;
+    const physicalW = Math.max(deskFp.width, prod.actualDimensions?.widthM ?? 0);
+    const physicalD = Math.max(deskFp.depth, prod.actualDimensions?.depthM ?? 0);
 
-    // True 2D box overlap test
-    const overlapX = targetX < item.gridX + dW && (targetX + width) > item.gridX;
-    const overlapZ = targetZ < item.gridZ + dD && (targetZ + depth) > item.gridZ;
-    return overlapX && overlapZ;
-  });
+    const deskCenterX = item.gridX + deskFp.width / 2;
+    const deskCenterZ = item.gridZ + deskFp.depth / 2;
+
+    const edgeTolerance = 0.15;
+    const dMinX = deskCenterX - physicalW / 2 - edgeTolerance;
+    const dMaxX = deskCenterX + physicalW / 2 + edgeTolerance;
+    const dMinZ = deskCenterZ - physicalD / 2 - edgeTolerance;
+    const dMaxZ = deskCenterZ + physicalD / 2 + edgeTolerance;
+
+    const tMinX = targetX - 0.05;
+    const tMaxX = targetX + width + 0.05;
+    const tMinZ = targetZ - 0.05;
+    const tMaxZ = targetZ + depth + 0.05;
+
+    const overlap = tMinX < dMaxX && tMaxX > dMinX && tMinZ < dMaxZ && tMaxZ > dMinZ;
+    if (overlap) {
+      const dist = Math.hypot(targetCenterX - deskCenterX, targetCenterZ - deskCenterZ);
+      if (dist < minDistance) {
+        minDistance = dist;
+        bestMatch = item;
+      }
+    }
+  }
+
+  return bestMatch;
 }
 
 /**
@@ -307,14 +372,33 @@ export function getTableSurfaceYUnder(
   catalog: SimsProduct[],
   itemMeshes?: Map<string, THREE.Group> | null,
   mountedOnDeskId?: string,
-  excludeInstanceId?: string | null
+  excludeInstanceId?: string | null,
+  roomWidth = 6,
+  roomLength = 6
 ): { surfaceY: number; deskId?: string } {
-  let desk: PlacedFurniture | undefined = undefined;
-  if (mountedOnDeskId) {
-    desk = placedItems.find(p => p.instanceId === mountedOnDeskId);
-  }
-  if (!desk) {
-    desk = findDeskUnder(placedItems, catalog, gridX, gridZ, fpW, fpD, excludeInstanceId);
+  // First, directly locate the desk physically underneath this target position
+  let desk: PlacedFurniture | undefined = findDeskUnder(
+    placedItems,
+    catalog,
+    gridX,
+    gridZ,
+    fpW,
+    fpD,
+    excludeInstanceId,
+    itemMeshes,
+    roomWidth,
+    roomLength
+  );
+
+  // If no desk found directly underneath, check mountedOnDeskId if within proximity
+  if (!desk && mountedOnDeskId) {
+    const candidate = placedItems.find(p => p.instanceId === mountedOnDeskId);
+    if (candidate) {
+      const prod = catalog.find(p => p.id === candidate.productId);
+      if (prod?.category === 'desks') {
+        desk = candidate;
+      }
+    }
   }
 
   if (!desk) {
@@ -325,6 +409,7 @@ export function getTableSurfaceYUnder(
   if (itemMeshes) {
     const deskMesh = itemMeshes.get(desk.instanceId);
     if (deskMesh) {
+      deskMesh.updateWorldMatrix(true, true);
       const box = new THREE.Box3().setFromObject(deskMesh);
       if (isFinite(box.max.y) && box.max.y > 0.3) {
         tableHeight = Math.round(box.max.y * 1000) / 1000;
@@ -334,7 +419,9 @@ export function getTableSurfaceYUnder(
 
   if (tableHeight === 0) {
     const deskProd = catalog.find(p => p.id === desk.productId);
-    tableHeight = deskProd?.actualDimensions?.heightM ?? (deskProd?.heightCm ? deskProd.heightCm / 100 : 0.74);
+    const baseH = deskProd?.actualDimensions?.heightM ?? (deskProd?.heightCm ? deskProd.heightCm / 100 : 0.74);
+    const elevatedH = (desk.surfaceY && desk.surfaceY > 0.3) ? desk.surfaceY : 0;
+    tableHeight = elevatedH > 0.3 ? elevatedH : baseH;
   }
 
   // Check if there is also a desk mat/pad underneath this item
@@ -347,11 +434,16 @@ export function getTableSurfaceYUnder(
     if (!isMat) return false;
 
     const matFp = getEffectiveFootprint(prod, item.rotation);
-    const mW = matFp.width;
-    const mD = matFp.depth;
+    const mW = Math.max(matFp.width, prod.actualDimensions?.widthM ?? 0);
+    const mD = Math.max(matFp.depth, prod.actualDimensions?.depthM ?? 0);
 
-    const overlapX = gridX < item.gridX + mW && (gridX + fpW) > item.gridX;
-    const overlapZ = gridZ < item.gridZ + mD && (gridZ + fpD) > item.gridZ;
+    const matCenterX = item.gridX + matFp.width / 2;
+    const matCenterZ = item.gridZ + matFp.depth / 2;
+    const targetCenterX = gridX + fpW / 2;
+    const targetCenterZ = gridZ + fpD / 2;
+
+    const overlapX = Math.abs(targetCenterX - matCenterX) < (mW + fpW) / 2;
+    const overlapZ = Math.abs(targetCenterZ - matCenterZ) < (mD + fpD) / 2;
     return overlapX && overlapZ;
   });
 

@@ -166,7 +166,27 @@ export default function App() {
   };
 
   const handleUpdateProduct = (id: string, updates: Partial<SimsProduct>) => {
-    setCatalog(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    setCatalog(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, ...updates } : p);
+      const updatedProd = next.find(p => p.id === id);
+      if (updatedProd && updatedProd.category === 'desks') {
+        const newDeskH = updatedProd.actualDimensions?.heightM ?? (updatedProd.heightCm ? updatedProd.heightCm / 100 : 0.74);
+        setPlacedItems(currentPlaced => {
+          const deskIds = new Set(currentPlaced.filter(item => item.productId === id).map(item => item.instanceId));
+          return currentPlaced.map(item => {
+            if (item.mountedOnDeskId && deskIds.has(item.mountedOnDeskId)) {
+              const isMat = item.productId === 'acc-felt-deskpad' || item.productId.includes('mat') || item.productId.includes('pad');
+              return {
+                ...item,
+                surfaceY: Math.round((newDeskH + (isMat ? 0 : 0.005)) * 1000) / 1000,
+              };
+            }
+            return item;
+          });
+        });
+      }
+      return next;
+    });
   };
 
   const handleDeleteProduct = (id: string) => {

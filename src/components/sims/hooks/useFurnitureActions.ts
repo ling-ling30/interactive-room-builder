@@ -93,6 +93,29 @@ export function useFurnitureActions({
       const origMesh = itemMeshesRef.current.get(item.instanceId);
       if (origMesh) origMesh.visible = false;
 
+      // Measure current live physical tabletop height if surface item so ghost mesh and group hold true height
+      let liveSurfaceY = item.surfaceY ?? 0;
+      let liveDeskId = item.mountedOnDeskId;
+      if (isSurfaceItem(prod)) {
+        const liveSurf = getTableSurfaceYUnder(
+          item.gridX,
+          item.gridZ,
+          itemFp.width,
+          itemFp.depth,
+          placedItems,
+          catalog,
+          itemMeshesRef.current,
+          item.mountedOnDeskId,
+          item.instanceId,
+          roomWidth,
+          roomLength
+        );
+        if (liveSurf.surfaceY > 0) {
+          liveSurfaceY = liveSurf.surfaceY;
+          liveDeskId = liveSurf.deskId;
+        }
+      }
+
       items.push({
         instanceId: item.instanceId,
         product: prod,
@@ -100,8 +123,8 @@ export function useFurnitureActions({
         deltaGridZ: dz,
         rotation: item.rotation,
         color: item.color,
-        surfaceY: item.surfaceY,
-        mountedOnDeskId: item.mountedOnDeskId,
+        surfaceY: liveSurfaceY,
+        mountedOnDeskId: liveDeskId,
         originalItem: { ...item },
       });
     });
@@ -207,12 +230,14 @@ export function useFurnitureActions({
       catalog,
       itemMeshesRef.current,
       undefined,
-      ignoreInstanceId
+      ignoreInstanceId,
+      roomWidth,
+      roomLength
     );
     return res.surfaceY > 0
       ? { surfaceY: res.surfaceY, mountedOnDeskId: res.deskId as string | undefined }
       : { surfaceY: 0, mountedOnDeskId: undefined as string | undefined };
-  }, [placedItems, catalog]);
+  }, [placedItems, catalog, roomWidth, roomLength]);
 
   // Direct drop / commit placement handler
   const handleDirectPlace = useCallback((targetTile?: { x: number; z: number }) => {
@@ -226,10 +251,42 @@ export function useFurnitureActions({
       const movedIds: string[] = [];
 
       group.items.forEach(it => {
+        const itGx = Math.round((tile.x + it.deltaGridX) * 1000) / 1000;
+        const itGz = Math.round((tile.z + it.deltaGridZ) * 1000) / 1000;
+        const itFp = getEffectiveFootprint(it.product, it.rotation);
+
+        let finalSurfaceY = it.surfaceY ?? 0;
+        let finalMountedDeskId = it.mountedOnDeskId;
+
+        if (isSurfaceItem(it.product)) {
+          // Check if a desk in this moving group is underneath this accessory
+          const deskInGroup = group.items.find(g => g.product.category === 'desks');
+          if (deskInGroup) {
+            const deskProd = deskInGroup.product;
+            const deskMesh = itemMeshesRef.current.get(deskInGroup.instanceId);
+            let deskH = deskProd.actualDimensions?.heightM ?? (deskProd.heightCm ? deskProd.heightCm / 100 : 0.74);
+            if (deskMesh) {
+              deskMesh.updateWorldMatrix(true, true);
+              const b = new THREE.Box3().setFromObject(deskMesh);
+              if (isFinite(b.max.y) && b.max.y > 0.3) {
+                deskH = Math.round(b.max.y * 1000) / 1000;
+              }
+            }
+            finalSurfaceY = deskH;
+            finalMountedDeskId = deskInGroup.instanceId;
+          } else {
+            const surf = resolveSurface(it.product, itGx, itGz, itFp, it.instanceId);
+            finalSurfaceY = surf.surfaceY;
+            finalMountedDeskId = surf.mountedOnDeskId;
+          }
+        }
+
         onUpdateItem(it.instanceId, {
-          gridX: Math.round((tile.x + it.deltaGridX) * 1000) / 1000,
-          gridZ: Math.round((tile.z + it.deltaGridZ) * 1000) / 1000,
+          gridX: itGx,
+          gridZ: itGz,
           rotation: it.rotation,
+          surfaceY: finalSurfaceY,
+          mountedOnDeskId: finalMountedDeskId,
         });
 
         const origMesh = itemMeshesRef.current.get(it.instanceId);

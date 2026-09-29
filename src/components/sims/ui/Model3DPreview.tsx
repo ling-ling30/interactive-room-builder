@@ -16,6 +16,8 @@ interface Model3DPreviewProps {
   showStats?: boolean;
   className?: string;
   onOpenExpanded?: () => void;
+  /** Render only the model over the parent's background: no grid, ground shadow, badges or control pills. */
+  minimal?: boolean;
 }
 
 export const Model3DPreview: React.FC<Model3DPreviewProps> = ({
@@ -27,6 +29,7 @@ export const Model3DPreview: React.FC<Model3DPreviewProps> = ({
   showStats = true,
   className = '',
   onOpenExpanded,
+  minimal = false,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +57,8 @@ export const Model3DPreview: React.FC<Model3DPreviewProps> = ({
     height,
     product: effectiveProduct,
     activeColor,
-    isGridOn,
+    isGridOn: isGridOn && !minimal,
+    hideGroundShadow: minimal,
     autoRotateRef,
     isWireframeRef,
     orbit,
@@ -85,18 +89,20 @@ export const Model3DPreview: React.FC<Model3DPreviewProps> = ({
       className={`relative w-full overflow-hidden select-none cursor-grab active:cursor-grabbing ${className}`}
       style={{ height }}
     >
-      <PreviewBadges
-        hasGlbAsset={Boolean(effectiveProduct.modelUrl)}
-        widthCm={widthCm}
-        depthCm={depthCm}
-        heightCm={heightCm}
-        scalePercent={scalePercent}
-        triangleCount={triangleCount}
-        isLoading={isLoading}
-        onOpenExpanded={onOpenExpanded}
-      />
+      {!minimal && (
+        <PreviewBadges
+          hasGlbAsset={Boolean(effectiveProduct.modelUrl)}
+          widthCm={widthCm}
+          depthCm={depthCm}
+          heightCm={heightCm}
+          scalePercent={scalePercent}
+          triangleCount={triangleCount}
+          isLoading={isLoading}
+          onOpenExpanded={onOpenExpanded}
+        />
+      )}
 
-      {showControls && (
+      {showControls && !minimal && (
         <PreviewControls
           showStats={showStats}
           widthCm={widthCm}

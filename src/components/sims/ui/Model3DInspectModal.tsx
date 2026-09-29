@@ -112,8 +112,7 @@ export const Model3DInspectModal: React.FC<Model3DInspectModalProps> = ({
             colorOverride={currentColor}
             height="100%"
             autoRotateDefault={true}
-            showControls={true}
-            showStats={true}
+            minimal
             className="flex-1 !rounded-none !border-none"
           />
 

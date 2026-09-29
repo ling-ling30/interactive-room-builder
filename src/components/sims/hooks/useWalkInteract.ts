@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { SimsProduct, PlacedFurniture } from '../../../data/simsCatalog';
 import { pickFurnitureHit } from '../three/pointerPicking';
@@ -8,6 +8,8 @@ import { useLatest } from '../../../hooks/useLatest';
 
 /** Furniture further than this from the eye cannot be targeted with the crosshair. */
 const REACH_M = 4.5;
+/** A carried item is held at most this far from the eye. */
+const CARRY_REACH_M = 3.5;
 
 interface UseWalkInteractParams {
   refs: SimsRoomRefs;
@@ -18,7 +20,7 @@ interface UseWalkInteractParams {
   catalog: SimsProduct[];
   handlePickupItem: (item: PlacedFurniture) => void;
   handleDirectPlace: (targetTile?: { x: number; z: number }) => void;
-  updatePointer: (clientX: number, clientY: number) => void;
+  updatePointer: (clientX: number, clientY: number, opts?: { maxReach?: number }) => void;
   hoverTile: { x: number; z: number } | null;
   /** Turns the walking camera by mouse-movement pixels. */
   walkLook: (dx: number, dy: number) => void;
@@ -48,7 +50,7 @@ export function useWalkInteract({
   onSwapItem,
   isSwapDrawerOpen,
 }: UseWalkInteractParams) {
-  const { mountRef, raycasterRef, itemMeshesRef, lookSteerRef } = refs;
+  const { mountRef, raycasterRef, itemMeshesRef, lookSteerRef, crosshairDrivenRef } = refs;
   const [isWalkInteract, setIsWalkInteract] = useState<boolean>(false);
   // Touch screens cannot lock the pointer: look is drag-based and stays in look mode
   const isTouchRef = useRef(typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches);
@@ -82,6 +84,14 @@ export function useWalkInteract({
   useEffect(() => {
     if (!isWalkMode) swapPhaseRef.current = null;
   }, [isWalkMode]);
+
+  // Look mode: placement follows the crosshair only (see useHeldPlacementPointer)
+  useLayoutEffect(() => {
+    crosshairDrivenRef.current = isWalkMode && !isWalkInteract;
+    return () => {
+      crosshairDrivenRef.current = false;
+    };
+  }, [isWalkMode, isWalkInteract, crosshairDrivenRef]);
 
   // Lock the pointer while looking around, release it while interacting
   useEffect(() => {
@@ -151,9 +161,30 @@ export function useWalkInteract({
     return () => clearInterval(timer);
   }, [isWalkMode, isWalkInteract, mountRef, lookSteerRef, walkLookRef]);
 
-  // Look mode: keep track of the furniture under the crosshair, or move the carried item with it
+  // Carrying: the ghost follows the crosshair every frame, but only does work when the view actually moved
   useEffect(() => {
-    if (!isWalkMode || isWalkInteract) return;
+    if (!isWalkMode || isWalkInteract || !heldProduct) return;
+    let frame = 0;
+    let lastKey = '';
+    const tick = () => {
+      frame = requestAnimationFrame(tick);
+      const camera = cameraRef.current;
+      const center = centerOfView();
+      if (!camera || !center) return;
+      const p = camera.position;
+      const q = camera.quaternion;
+      const key = `${p.x.toFixed(3)},${p.y.toFixed(3)},${p.z.toFixed(3)},${q.x.toFixed(4)},${q.y.toFixed(4)},${q.z.toFixed(4)},${q.w.toFixed(4)}`;
+      if (key === lastKey) return;
+      lastKey = key;
+      updatePointer(center.x, center.y, { maxReach: CARRY_REACH_M });
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [isWalkMode, isWalkInteract, heldProduct, cameraRef, centerOfView, updatePointer]);
+
+  // Look mode, nothing carried: keep track of the furniture under the crosshair
+  useEffect(() => {
+    if (!isWalkMode || isWalkInteract || heldProduct) return;
     const cache: { placed: unknown; catalog: unknown; meshCount: number; targetable: Map<string, THREE.Group> } = {
       placed: null, catalog: null, meshCount: -1, targetable: new Map(),
     };
@@ -162,13 +193,6 @@ export function useWalkInteract({
       const mount = mountRef.current;
       const center = centerOfView();
       if (!camera || !mount || !center) return;
-
-      if (heldProduct) {
-        // Carrying: the ghost follows the crosshair
-        updatePointer(center.x, center.y);
-        if (walkTargetRef.current) setWalkTarget(null);
-        return;
-      }
 
       // Rugs and mats lie on the floor: never target them, so the crosshair reaches the furniture on top
       // Only rebuild when the scene items, placement list or catalog actually changed
@@ -186,8 +210,7 @@ export function useWalkInteract({
         cache.catalog = catalogRef.current;
         cache.meshCount = meshes.size;
       }
-      const targetable = cache.targetable;
-      const hit = pickFurnitureHit(raycasterRef.current, camera, mount, center.x, center.y, targetable);
+      const hit = pickFurnitureHit(raycasterRef.current, camera, mount, center.x, center.y, cache.targetable);
       const item = hit && hit.distance <= REACH_M
         ? placedItemsRef.current.find(p => p.instanceId === hit.instanceId) ?? null
         : null;
@@ -197,7 +220,7 @@ export function useWalkInteract({
       clearInterval(timer);
       setWalkTarget(null);
     };
-  }, [isWalkMode, isWalkInteract, heldProduct, cameraRef, mountRef, raycasterRef, itemMeshesRef, centerOfView, updatePointer, walkTargetRef, catalogRef, placedItemsRef]);
+  }, [isWalkMode, isWalkInteract, heldProduct, cameraRef, mountRef, raycasterRef, itemMeshesRef, centerOfView, walkTargetRef, catalogRef, placedItemsRef]);
 
   /** F: toggle the free cursor. Nothing is picked up: moving furniture is R (crosshair) or drag (free cursor). */
   const onWalkAction = useCallback(() => {

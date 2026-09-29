@@ -316,6 +316,7 @@ export function useCanvasPointerHandlers({
   };
 
   const onPointerLeave = () => {
+    if (isWalkModeRef.current && !isWalkInteractRef.current) return;
     if (hoverIndicatorRef.current) hoverIndicatorRef.current.visible = false;
     if (ghostMeshRef.current) ghostMeshRef.current.visible = false;
     setHoverTile(null);

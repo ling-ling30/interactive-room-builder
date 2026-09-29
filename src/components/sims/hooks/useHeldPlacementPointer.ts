@@ -55,11 +55,13 @@ export function useHeldPlacementPointer({
     movingGroupRef,
     movingInstanceIdRef,
     isCopiedGroupRef,
+    crosshairDrivenRef,
   } = refs;
   const { heldRotation, snapStep, setHoverTile, setCenterSnapInfo, setHoveredInstanceId } = placement;
 
   // Pointer position calculation with parallax-free desk surface raycasting
-  const updatePointer = useCallback((clientX: number, clientY: number) => {
+  /** `maxReach` (walk mode): the item never lands further than this from the eye, it stays in front instead. */
+  const updatePointer = useCallback((clientX: number, clientY: number, opts?: { maxReach?: number }) => {
     if (!mountRef.current || !cameraRef.current || !floorMeshRef.current) return;
 
     raycasterRef.current.setFromCamera(clientToNdc(clientX, clientY, mountRef.current), cameraRef.current);
@@ -146,6 +148,22 @@ export function useHeldPlacementPointer({
       }
     }
 
+    // Walking: a ray at the horizon (or one that misses the floor) would fling the item to the far wall
+    // or hide it, so anything beyond reach is held at maximum reach straight ahead instead
+    const maxReach = opts?.maxReach;
+    if (maxReach !== undefined) {
+      const { origin, direction } = raycasterRef.current.ray;
+      const dist = pt ? Math.hypot(pt.x - origin.x, pt.z - origin.z) : Infinity;
+      if (dist > maxReach) {
+        const len = Math.hypot(direction.x, direction.z);
+        const ux = len > 1e-6 ? direction.x / len : 0;
+        const uz = len > 1e-6 ? direction.z / len : 0;
+        pt = new THREE.Vector3(origin.x + ux * maxReach, 0, origin.z + uz * maxReach);
+        targetSurfaceY = 0;
+        matchedDesk = null;
+      }
+    }
+
     if (!pt) {
       if (hoverIndicatorRef.current) hoverIndicatorRef.current.visible = false;
       if (ghostMeshRef.current) ghostMeshRef.current.visible = false;
@@ -176,7 +194,7 @@ export function useHeldPlacementPointer({
 
       gx = Math.max(minX, Math.min(maxX, Math.round(gx * 1000) / 1000));
       gz = Math.max(minZ, Math.min(maxZ, Math.round(gz * 1000) / 1000));
-      setCenterSnapInfo({ isSnapped: false });
+      setCenterSnapInfo(prev => (prev.isSnapped ? { isSnapped: false } : prev));
     } else {
       const clamped = clampGridCoords(targetGx, targetGz, fp.width, fp.depth, roomWidth, roomLength, effectiveStep);
       gx = clamped.x;
@@ -201,9 +219,11 @@ export function useHeldPlacementPointer({
       if (snapResult?.isSnapped) {
         gx = snapResult.x;
         gz = snapResult.z;
-        setCenterSnapInfo({ isSnapped: true, targetDeskName: snapResult.targetDeskName });
+        setCenterSnapInfo(prev =>
+          prev.isSnapped && prev.targetDeskName === snapResult.targetDeskName ? prev : { isSnapped: true, targetDeskName: snapResult.targetDeskName }
+        );
       } else {
-        setCenterSnapInfo({ isSnapped: false });
+        setCenterSnapInfo(prev => (prev.isSnapped ? { isSnapped: false } : prev));
       }
     }
 
@@ -229,7 +249,8 @@ export function useHeldPlacementPointer({
       }
     }
 
-    setHoverTile({ x: gx, z: gz });
+    // Same tile as last time: keep the old object so React skips the re-render
+    setHoverTile(prev => (prev && prev.x === gx && prev.z === gz ? prev : { x: gx, z: gz }));
 
     const worldPos = gridToWorld(gx, gz, fp.width, fp.depth, roomWidth, roomLength);
 
@@ -263,6 +284,8 @@ export function useHeldPlacementPointer({
     let initialPos: { x: number; y: number } | null = null;
 
     const handleGlobalPointerMove = (e: PointerEvent) => {
+      // Walk look mode places from the crosshair: a (locked / steering) mouse position must not move the ghost
+      if (crosshairDrivenRef.current) return;
       if (!initialPos) {
         initialPos = { x: e.clientX, y: e.clientY };
       } else if (Math.hypot(e.clientX - initialPos.x, e.clientY - initialPos.y) > 10) {
@@ -297,7 +320,7 @@ export function useHeldPlacementPointer({
       window.removeEventListener('pointermove', handleGlobalPointerMove);
       window.removeEventListener('pointerup', handleGlobalPointerUp);
     };
-  }, [heldProduct, updatePointer, handleDirectPlace, mountRef, isCopiedGroupRef, movingGroupRef, movingInstanceIdRef]);
+  }, [heldProduct, updatePointer, handleDirectPlace, mountRef, isCopiedGroupRef, movingGroupRef, movingInstanceIdRef, crosshairDrivenRef]);
 
   return { updatePointer };
 }

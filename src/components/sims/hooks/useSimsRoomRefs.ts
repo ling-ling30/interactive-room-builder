@@ -51,6 +51,8 @@ export function useSimsRoomRefs() {
   const lastTimeRef = useRef<number>(0);
   // Walk look without pointer lock: mouse offset from the view centre (-1..1) steers the camera
   const lookSteerRef = useRef({ x: 0, y: 0 });
+  // True while walk look mode drives placement from the crosshair (pointer-position updates must stay out of the way)
+  const crosshairDrivenRef = useRef(false);
 
   return {
     mountRef,
@@ -84,6 +86,7 @@ export function useSimsRoomRefs() {
     keysRef,
     lastTimeRef,
     lookSteerRef,
+    crosshairDrivenRef,
   };
 }
 

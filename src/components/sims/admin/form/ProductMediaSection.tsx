@@ -6,6 +6,7 @@ import { saveModelToStorage } from '../../../../utils/modelStorage';
 import { AppleSelect } from '../../ui/AppleSelect';
 import { Model3DPreview } from '../../ui/Model3DPreview';
 import { AppleDimensionAdjuster, type DimensionValues } from '../../ui/AppleDimensionAdjuster';
+import { CollapsibleSection } from './CollapsibleSection';
 import { PUBLIC_3D_LIBRARY, getPresetFieldsForModelPath } from '../model3dLibrary';
 import type { ShowStatus } from '../useAdminStatus';
 import type { ProductFormApi } from '../useProductForm';
@@ -171,7 +172,7 @@ export const ProductMediaSection: React.FC<ProductMediaSectionProps> = ({
         </div>
 
         {/* Live 3D Viewport */}
-        <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-gradient-to-b from-[#080b11] via-[#0d121c] to-[#121824] relative">
+        <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-inner bg-gradient-to-b from-[#f8f3e6] via-[#f3ecdb] to-[#ece2c9] relative">
           <Model3DPreview
             product={previewProduct}
             colorOverride={color}
@@ -182,18 +183,12 @@ export const ProductMediaSection: React.FC<ProductMediaSectionProps> = ({
           />
         </div>
 
-        {/* Live Product Dimensions Calibrator (Apple Direct Manipulation) */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
-              <Ruler className="w-3.5 h-3.5 text-cyan-600" />
-              <span>Product True-to-Life Dimensions</span>
-            </label>
-            <span className="text-[10px] text-emerald-700 font-mono font-semibold px-2 py-0.5 bg-emerald-50 rounded-full border border-emerald-200">
-              Live 3D Scaling
-            </span>
-          </div>
-
+        {/* Advanced 3D Settings: true-to-life dimensions, scale and fit (collapsed by default) */}
+        <CollapsibleSection
+          title="Advanced 3D Settings"
+          icon={<Ruler className="w-3.5 h-3.5 text-cyan-600" />}
+          badge="Live 3D Scaling"
+        >
           <AppleDimensionAdjuster
             dimensions={{
               widthM: actualWidthM,
@@ -202,7 +197,8 @@ export const ProductMediaSection: React.FC<ProductMediaSectionProps> = ({
               scaleMultiplier,
               fitMode,
             }}
-            category={category}
+            className="!bg-[#faf6ec] !border-[#e2d7bd] !shadow-none"
+          category={category}
             onChange={(updated: DimensionValues) => {
               patch({
                 actualWidthM: updated.widthM,
@@ -216,7 +212,7 @@ export const ProductMediaSection: React.FC<ProductMediaSectionProps> = ({
               });
             }}
           />
-        </div>
+        </CollapsibleSection>
 
         {/* Asset Source Controls */}
         <div className="space-y-2.5 pt-1">

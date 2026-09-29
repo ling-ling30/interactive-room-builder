@@ -109,7 +109,7 @@ export const Model3DInspectModal: React.FC<Model3DInspectModalProps> = ({
     >
       <div className="bg-[#0f141f] border border-white/15 rounded-3xl max-w-5xl w-full shadow-2xl overflow-hidden flex flex-col md:flex-row text-white max-h-[94vh]">
         {/* Left: 3D Turntable Studio Viewport */}
-        <div className="flex-1 min-h-[380px] md:min-h-[560px] relative bg-gradient-to-b from-[#080b11] via-[#0d121c] to-[#121824] flex flex-col">
+        <div className="flex-1 min-h-[380px] md:min-h-[560px] relative bg-gradient-to-b from-[#f8f3e6] via-[#f3ecdb] to-[#ece2c9] flex flex-col">
           <Model3DPreview
             product={calibratedProduct}
             colorOverride={currentColor}
@@ -120,10 +120,10 @@ export const Model3DInspectModal: React.FC<Model3DInspectModalProps> = ({
           />
 
           {/* Color Switcher Bar below 3D canvas */}
-          <div className="p-3 bg-black/60 border-t border-white/10 backdrop-blur-md flex items-center justify-between gap-2 flex-wrap">
+          <div className="p-3 bg-[#f3ecdb] border-t border-[#e2d7bd] flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <Palette className="w-3.5 h-3.5 text-cyan-400 ml-1" />
-              <span className="text-[11px] font-mono text-zinc-400 font-semibold">Finish:</span>
+              <Palette className="w-3.5 h-3.5 text-cyan-600 ml-1" />
+              <span className="text-[11px] font-mono text-stone-600 font-semibold">Finish:</span>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {PREVIEW_PALETTE.map((pal) => {
                   const isCur = currentColor.toLowerCase() === pal.hex.toLowerCase();
@@ -154,7 +154,7 @@ export const Model3DInspectModal: React.FC<Model3DInspectModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedColor(null)}
-                className="text-[10px] text-zinc-400 hover:text-white underline cursor-pointer font-mono"
+                className="text-[10px] text-stone-500 hover:text-stone-900 underline cursor-pointer font-mono"
               >
                 Reset Finish
               </button>

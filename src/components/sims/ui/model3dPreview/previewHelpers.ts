@@ -72,10 +72,10 @@ export function createPreviewStage(scene: THREE.Scene): PreviewStage {
   turntable.add(shadowPlane);
 
   // Clean subtle reference grid
-  const gridHelper = new THREE.GridHelper(3.6, 36, 0x475569, 0x1e293b);
+  const gridHelper = new THREE.GridHelper(3.6, 36, 0xb8a888, 0xd6c9aa);
   gridHelper.position.y = 0.0005;
   (gridHelper.material as THREE.Material).transparent = true;
-  (gridHelper.material as THREE.Material).opacity = 0.25;
+  (gridHelper.material as THREE.Material).opacity = 0.55;
   turntable.add(gridHelper);
 
   // Apple Studio Balanced Lighting

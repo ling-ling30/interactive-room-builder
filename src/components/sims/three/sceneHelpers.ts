@@ -282,13 +282,29 @@ export function makeGhostTranslucent(root: THREE.Object3D, opacity = 0.7) {
 export function setSelectionEmissive(root: THREE.Object3D, isSelected: boolean) {
   root.traverse(child => {
     if (child instanceof THREE.Mesh && child.material) {
-      const mat = child.material as THREE.MeshStandardMaterial;
-      if (isSelected) {
-        mat.emissive = new THREE.Color(0x10b981);
-        mat.emissiveIntensity = 0.35;
-      } else {
-        mat.emissive = new THREE.Color(0x000000);
-        mat.emissiveIntensity = 0;
+      // Clone the material on first use so emissive changes are instance-local
+      // and don't bleed into every other mesh sharing the same cached material.
+      if (!child.userData.__ownMaterial) {
+        if (Array.isArray(child.material)) {
+          child.material = child.material.map((m: THREE.Material) => m.clone());
+        } else {
+          child.material = (child.material as THREE.Material).clone();
+        }
+        child.userData.__ownMaterial = true;
+      }
+
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of mats) {
+        const std = mat as THREE.MeshStandardMaterial;
+        if (typeof std.emissive !== 'undefined') {
+          if (isSelected) {
+            std.emissive = new THREE.Color(0x10b981);
+            std.emissiveIntensity = 0.35;
+          } else {
+            std.emissive = new THREE.Color(0x000000);
+            std.emissiveIntensity = 0;
+          }
+        }
       }
     }
   });

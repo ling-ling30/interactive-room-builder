@@ -7,25 +7,70 @@ interface RawSize {
   z: number;
 }
 
-/** Per-axis scale that fits a raw model of `rawSize` to the product's real-world dimensions. */
+/**
+ * Category-aware scaling that fits a raw model of `rawSize` to the product's
+ * real-world dimensions.
+ *
+ * - **Desks / tables**: exact per-axis scale so tabletop hits the right W×D×H.
+ * - **Chairs / stools**: proportional scale anchored to **height** so seat
+ *   height and armrests land at ergonomic positions without distortion.
+ * - **Monitors**: proportional scale anchored to **width** so 16:9 / 21:9
+ *   aspect ratios are preserved.
+ * - **Accessories / lamps / everything else with `fitMode === 'exact'`**:
+ *   independent per-axis. Otherwise proportional anchored to height.
+ */
 function computeTargetScale(product: SimsProduct, rawSize: RawSize) {
   const targetW = product.actualDimensions?.widthM ?? product.footprint?.width ?? 1.2;
   const targetD = product.actualDimensions?.depthM ?? product.footprint?.depth ?? 0.6;
   const targetH = product.actualDimensions?.heightM ?? (product.heightCm ? product.heightCm / 100 : 0.74);
   const scaleMult = product.scaleMultiplier ?? 1.0;
-  const fitMode = product.fitMode ?? 'exact';
+  const fitMode = product.fitMode; // undefined → auto-detect from category
 
   let scaleX = (targetW / rawSize.x) * scaleMult;
   let scaleY = (targetH / rawSize.y) * scaleMult;
   let scaleZ = (targetD / rawSize.z) * scaleMult;
 
+  // Explicit fitMode overrides auto-detection
+  if (fitMode === 'exact') {
+    return { scaleX, scaleY, scaleZ };
+  }
   if (fitMode === 'proportional') {
-    const uniform = Math.min(scaleX, scaleY, scaleZ);
-    scaleX = uniform;
-    scaleY = uniform;
-    scaleZ = uniform;
+    // Legacy proportional: uniform from height (was Math.min — the root cause
+    // of chairs being crushed). Anchoring to height is the safe default.
+    const uniform = scaleY;
+    return { scaleX: uniform, scaleY: uniform, scaleZ: uniform };
   }
 
+  // Auto-detect from category / modelType
+  const cat = product.category ?? '';
+  const mt = product.modelType ?? '';
+
+  const isDesk = cat === 'desks' || mt.includes('desk') || mt.includes('table');
+  const isChair = cat === 'chairs' || mt.includes('chair') || mt.includes('stool');
+  const isMonitor = cat === 'monitors' || mt.includes('monitor') || mt.includes('laptop');
+
+  if (isDesk) {
+    // Desks: exact per-axis so tabletop dimensions are precise
+    return { scaleX, scaleY, scaleZ };
+  }
+
+  if (isChair) {
+    // Chairs: proportional anchored to HEIGHT.
+    // Height is the ergonomic anchor (seat height ≈ 0.48m, armrest ≈ 0.65m).
+    // The bounding-box width/depth includes the 5-star wheeled base which is
+    // always wider than the cataloged seat-cushion width, so scaling by width
+    // would crush the chair.
+    const uniform = scaleY;
+    return { scaleX: uniform, scaleY: uniform, scaleZ: uniform };
+  }
+
+  if (isMonitor) {
+    // Monitors: proportional anchored to WIDTH to preserve screen aspect ratio
+    const uniform = scaleX;
+    return { scaleX: uniform, scaleY: uniform, scaleZ: uniform };
+  }
+
+  // Default for accessories, lamps, plants, etc.: exact per-axis
   return { scaleX, scaleY, scaleZ };
 }
 

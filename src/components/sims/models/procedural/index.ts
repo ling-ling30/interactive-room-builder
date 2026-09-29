@@ -58,7 +58,11 @@ const PROCEDURAL_BUILDERS: Record<string, ModelBuilder> = {
   headphone_stand: buildHeadphoneStand,
 };
 
-/** Scales non-desk procedural models to the product's real-world dimensions and re-seats them on the floor. */
+/**
+ * Scales non-desk procedural models to the product's real-world dimensions
+ * using category-aware proportional scaling (mirrors computeTargetScale in
+ * gltfDimensions.ts) and re-seats them on the floor.
+ */
 function fitToActualDimensions(group: THREE.Group, product: SimsProduct) {
   const isDesk = product.category === 'desks' || product.modelType?.includes('desk') || product.modelType?.includes('table');
   if (isDesk || !product.actualDimensions) return;
@@ -66,24 +70,41 @@ function fitToActualDimensions(group: THREE.Group, product: SimsProduct) {
   const box = new THREE.Box3().setFromObject(group);
   const size = new THREE.Vector3();
   box.getSize(size);
-  if (size.x > 0.001 && size.y > 0.001 && size.z > 0.001) {
-    const targetW = product.actualDimensions.widthM;
-    const targetD = product.actualDimensions.depthM;
-    const targetH = product.actualDimensions.heightM;
-    const mult = product.scaleMultiplier ?? 1.0;
-    if (product.fitMode === 'exact') {
-      group.scale.set((targetW / size.x) * mult, (targetH / size.y) * mult, (targetD / size.z) * mult);
-    } else {
-      const sX = targetW / size.x;
-      const sY = targetH ? (targetH / size.y) : sX;
-      const sZ = targetD / size.z;
-      const uniform = Math.min(sX, sY, sZ) * mult;
-      group.scale.setScalar(uniform);
-    }
-    // Re-align to sit flat on floor
-    const updated = new THREE.Box3().setFromObject(group);
-    group.position.y -= updated.min.y;
+  if (size.x < 0.001 || size.y < 0.001 || size.z < 0.001) return;
+
+  const targetW = product.actualDimensions.widthM;
+  const targetD = product.actualDimensions.depthM;
+  const targetH = product.actualDimensions.heightM;
+  const mult = product.scaleMultiplier ?? 1.0;
+
+  const sX = (targetW / size.x) * mult;
+  const sY = targetH ? (targetH / size.y) * mult : sX;
+  const sZ = (targetD / size.z) * mult;
+
+  const cat = product.category ?? '';
+  const mt = product.modelType ?? '';
+  const isChair = cat === 'chairs' || mt.includes('chair') || mt.includes('stool');
+  const isMonitor = cat === 'monitors' || mt.includes('monitor') || mt.includes('laptop');
+
+  if (product.fitMode === 'exact') {
+    group.scale.set(sX, sY, sZ);
+  } else if (isChair) {
+    // Proportional anchored to height — preserves wheel-base and armrest proportions
+    group.scale.setScalar(sY);
+  } else if (isMonitor) {
+    // Proportional anchored to width — preserves screen aspect ratio
+    group.scale.setScalar(sX);
+  } else if (product.fitMode === 'proportional') {
+    // Legacy proportional: anchor to height (safer than Math.min)
+    group.scale.setScalar(sY);
+  } else {
+    // Default for accessories: exact per-axis
+    group.scale.set(sX, sY, sZ);
   }
+
+  // Re-align to sit flat on floor
+  const updated = new THREE.Box3().setFromObject(group);
+  group.position.y -= updated.min.y;
 }
 
 /** Stylized Sims-style furniture built from primitives (used when no .glb is attached). */

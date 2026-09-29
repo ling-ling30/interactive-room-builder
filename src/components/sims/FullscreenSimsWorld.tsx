@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { SimsProduct, PlacedFurniture } from '../../data/simsCatalog';
-import { DEFAULT_SIMS_ROOM } from '../../data/simsCatalog';
 import type { SpaceParameters } from '../../types/space';
 import { buildSetupItems, createSetupFromRoom, type RoomSetup } from '../../data/roomSetups';
 import { DEFAULT_SPACE } from '../../types/space';
@@ -13,7 +12,7 @@ import { FurnitureStoreSidebar } from './ui/FurnitureStoreSidebar';
 import { FurnitureSwapperDrawer } from './ui/FurnitureSwapperDrawer';
 import {
   ArrowLeft, Keyboard, ShoppingBag,
-  Maximize2, Package, Armchair, Footprints, RotateCcw
+  Maximize2, Package, Armchair, Footprints, RotateCcw, Trash2
 } from 'lucide-react';
 import { sounds } from '../../utils/soundEffects';
 import { STORAGE_SPACE_KEY } from '../../utils/storageKeys';
@@ -165,11 +164,11 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
   // Resize the virtual room to the setup's shell and lay out its furniture
   const { confirm } = useDialogs();
 
-  const handleQuickReset = async () => {
-    if (!(await confirm({ title: 'Quick reset', message: 'Reset the room to the default layout? Your current furniture will be replaced.', confirmLabel: 'Reset', danger: true }))) return;
-    sounds.playSelect();
-    setSpaceParams(DEFAULT_SPACE);
-    onReplaceRoom(DEFAULT_SIMS_ROOM.map(item => ({ ...item })));
+  const handleClearRoom = async () => {
+    if (placedItems.length === 0) return;
+    if (!(await confirm({ title: 'Clear room', message: 'Remove all furniture from the room? The room size and style stay as they are.', confirmLabel: 'Clear', danger: true }))) return;
+    sounds.playDelete();
+    onReplaceRoom([]);
   };
 
   // Confirms before replacing furniture, then lays out the setup
@@ -329,14 +328,15 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
             <span className="hidden md:inline">Controls</span>
           </button>
 
-          {/* Quick reset: restore the default room and layout */}
+          {/* Clear: remove every placed item */}
           <button
-            onClick={handleQuickReset}
-            className="apple-press bg-white/95 hover:bg-white flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-slate-700 border border-slate-200/90 transition shadow-md cursor-pointer"
-            title="Quick reset: restore the default room and layout"
+            onClick={handleClearRoom}
+            disabled={placedItems.length === 0}
+            className="apple-press bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-white border border-rose-700/40 transition shadow-md cursor-pointer"
+            title="Clear all furniture from the room"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
-            <span className="hidden md:inline">Quick Reset</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Clear</span>
           </button>
 
           <button

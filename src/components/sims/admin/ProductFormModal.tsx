@@ -34,7 +34,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+    <div role="dialog" aria-modal="true" aria-label="Product form" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl relative my-auto border border-slate-200 text-slate-900 max-h-[92vh] overflow-y-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">

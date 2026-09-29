@@ -7,6 +7,9 @@ import { AdminHeader } from './admin/AdminHeader';
 import { AdminKpiStrip } from './admin/AdminKpiStrip';
 import { AdminFilterBar } from './admin/AdminFilterBar';
 import { AdminCatalogTable } from './admin/AdminCatalogTable';
+import { AdminTableToolbar } from './admin/AdminTableToolbar';
+import { AdminTablePagination } from './admin/AdminTablePagination';
+import { useCatalogTable } from './admin/useCatalogTable';
 import { ProductFormModal } from './admin/ProductFormModal';
 import { AdminSetupsSection } from './admin/AdminSetupsSection';
 import type { RoomSetupsApi } from '../../utils/setupStorage';
@@ -44,8 +47,6 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
   currentRoomItemCount,
   onSaveCurrentRoomAsSetup,
 }) => {
-  const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [inspectingProduct, setInspectingProduct] = useState<SimsProduct | null>(null);
   const { statusMsg, showStatus } = useAdminStatus();
 
@@ -61,6 +62,7 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
     [catalog]
   );
 
+  const table = useCatalogTable(catalog);
   const productForm = useProductForm(availableCategories);
   const { editingItem, values, openAdd, openEdit, close } = productForm;
 
@@ -125,17 +127,6 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
     reader.readAsText(file);
   };
 
-  const query = search.toLowerCase();
-  const filteredItems = catalog.filter(item => {
-    const matchCat = activeCategory === 'all' || item.category?.toLowerCase() === activeCategory.toLowerCase();
-    const matchSearch =
-      item.name.toLowerCase().includes(query) ||
-      item.brand.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query) ||
-      (item.material && item.material.toLowerCase().includes(query));
-    return matchCat && matchSearch;
-  });
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 animate-fade-in text-slate-900 select-none">
       <AdminHeader
@@ -168,18 +159,34 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
       <AdminFilterBar
         catalog={catalog}
         availableCategories={availableCategories}
-        search={search}
-        onSearchChange={setSearch}
-        activeCategory={activeCategory}
-        onCategoryChange={setActiveCategory}
+        search={table.search}
+        onSearchChange={table.setSearch}
+        activeCategory={table.category}
+        onCategoryChange={table.setCategory}
       />
 
+      <AdminTableToolbar table={table} />
+
       <AdminCatalogTable
-        items={filteredItems}
+        items={table.pageItems}
+        sort={table.sort}
+        onSort={table.toggleSort}
+        onResetFilters={table.activeFilterCount > 0 ? table.resetAll : undefined}
         onInspect={setInspectingProduct}
         onDuplicate={handleDuplicate}
         onEdit={openEdit}
         onDelete={handleDelete}
+        footer={
+          <AdminTablePagination
+            page={table.page}
+            pageCount={table.pageCount}
+            pageSize={table.pageSize}
+            filteredCount={table.filteredCount}
+            totalCount={table.totalCount}
+            onPageChange={table.setPage}
+            onPageSizeChange={table.setPageSize}
+          />
+        }
       />
 
       <AdminSetupsSection

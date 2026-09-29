@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import type { SimsProduct } from '../../../data/simsCatalog';
 import { AppleSelect } from '../ui/AppleSelect';
@@ -23,17 +23,44 @@ export const AdminFilterBar: React.FC<AdminFilterBarProps> = ({
   onSearchChange,
   activeCategory,
   onCategoryChange,
-}) => (
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // "/" jumps to search (like Spotlight), Esc inside the box clears then blurs
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+      const modalOpen = Boolean(document.querySelector('[role="dialog"]'));
+      const hasModifier = e.ctrlKey || e.metaKey || e.altKey;
+      if (e.key === '/' && !typing && !modalOpen && !hasModifier) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  return (
   <div className="flex flex-col md:flex-row gap-3 mb-6 items-stretch md:items-center justify-between">
     <div className="flex items-center gap-2.5 flex-1 max-w-xl">
       <div className="relative flex-1">
         <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
-          type="text"
-          placeholder="Search by name, brand, category, or material..."
+          ref={inputRef}
+          type="search"
+          placeholder="Search name, brand, category or material   ( / )"
+          aria-label="Search catalog"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-slate-900 shadow-2xs transition"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              if (search) onSearchChange('');
+              else inputRef.current?.blur();
+            }
+          }}
+          className="w-full pl-9 pr-9 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 [&::-webkit-search-cancel-button]:hidden focus:outline-none focus:border-slate-900 shadow-2xs transition"
         />
         {search && (
           <button
@@ -94,4 +121,5 @@ export const AdminFilterBar: React.FC<AdminFilterBarProps> = ({
       })}
     </div>
   </div>
-);
+  );
+};

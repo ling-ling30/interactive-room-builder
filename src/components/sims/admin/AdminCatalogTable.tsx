@@ -2,6 +2,8 @@ import React from 'react';
 import { Trash2, Edit3, Box, Copy, Eye } from 'lucide-react';
 import type { SimsProduct } from '../../../data/simsCatalog';
 import { sounds } from '../../../utils/soundEffects';
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import type { SortKey, SortDir } from './useCatalogTable';
 
 interface AdminCatalogTableProps {
   items: SimsProduct[];
@@ -9,7 +11,39 @@ interface AdminCatalogTableProps {
   onDuplicate: (item: SimsProduct) => void;
   onEdit: (item: SimsProduct) => void;
   onDelete: (item: SimsProduct) => void;
+  sort: { key: SortKey; dir: SortDir } | null;
+  onSort: (key: SortKey) => void;
+  onResetFilters?: () => void;
+  /** Rendered inside the table card, below the rows (pagination). */
+  footer?: React.ReactNode;
 }
+
+interface SortHeaderProps {
+  label: string;
+  sortKey: SortKey;
+  sort: { key: SortKey; dir: SortDir } | null;
+  onSort: (key: SortKey) => void;
+}
+
+const SortHeader: React.FC<SortHeaderProps> = ({ label, sortKey, sort, onSort }) => {
+  const active = sort?.key === sortKey;
+  return (
+    <th className="py-3 px-4" aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`group inline-flex items-center gap-1 uppercase tracking-wider font-bold transition cursor-pointer ${active ? 'text-slate-900' : 'hover:text-slate-800'}`}
+      >
+        {label}
+        {active ? (
+          sort.dir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+        ) : (
+          <ChevronsUpDown className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+        )}
+      </button>
+    </th>
+  );
+};
 
 export const AdminCatalogTable: React.FC<AdminCatalogTableProps> = ({
   items,
@@ -17,6 +51,10 @@ export const AdminCatalogTable: React.FC<AdminCatalogTableProps> = ({
   onDuplicate,
   onEdit,
   onDelete,
+  sort,
+  onSort,
+  onResetFilters,
+  footer,
 }) => {
   const inspect = (item: SimsProduct) => {
     sounds.playClick();
@@ -29,11 +67,11 @@ export const AdminCatalogTable: React.FC<AdminCatalogTableProps> = ({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-mono uppercase text-slate-500 font-bold tracking-wider">
-              <th className="py-3 px-4">Product & Visual</th>
-              <th className="py-3 px-4">Category</th>
-              <th className="py-3 px-4">Footprint & 3D</th>
-              <th className="py-3 px-4">Rates (Wk / Mo)</th>
-              <th className="py-3 px-4">Deposit</th>
+              <SortHeader label="Product" sortKey="name" sort={sort} onSort={onSort} />
+              <SortHeader label="Category" sortKey="category" sort={sort} onSort={onSort} />
+              <SortHeader label="Size" sortKey="size" sort={sort} onSort={onSort} />
+              <SortHeader label="Rates" sortKey="monthly" sort={sort} onSort={onSort} />
+              <SortHeader label="Deposit" sortKey="deposit" sort={sort} onSort={onSort} />
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -41,7 +79,12 @@ export const AdminCatalogTable: React.FC<AdminCatalogTableProps> = ({
             {items.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
-                  No equipment found matching your criteria. Try adjusting your search or add a new item.
+                  <div>No equipment matches these filters.</div>
+                  {onResetFilters && (
+                    <button type="button" onClick={onResetFilters} className="apple-press mt-2 px-3 py-1.5 rounded-full bg-slate-900 text-white text-xs font-bold cursor-pointer">
+                      Reset filters
+                    </button>
+                  )}
                 </td>
               </tr>
             ) : (
@@ -193,6 +236,7 @@ export const AdminCatalogTable: React.FC<AdminCatalogTableProps> = ({
           </tbody>
         </table>
       </div>
+      {footer}
     </div>
   );
 };

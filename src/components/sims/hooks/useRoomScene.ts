@@ -213,6 +213,7 @@ export function useRoomScene({
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
+      renderer.forceContextLoss();
       itemMeshes.clear();
       ghostMeshRef.current = null;
       sceneRef.current = null;

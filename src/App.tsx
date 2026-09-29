@@ -8,6 +8,7 @@ import { WorkstationStationModal } from './components/workstation/WorkstationSta
 import { DEFAULT_SPACE } from './types/space';
 import { buildSetupItems, createSetupFromRoom, type RoomSetup } from './data/roomSetups';
 import { useRoomSetups } from './utils/setupStorage';
+import { STORAGE_SPACE_KEY } from './utils/storageKeys';
 import type { WorkstationConfig } from './types/workstation';
 
 const STORAGE_CATALOG_KEY = 'monis_sims_catalog_v9_scraped';
@@ -165,7 +166,7 @@ export default function App() {
   const handleSaveCurrentRoomAsSetup = (name: string) => {
     let space = DEFAULT_SPACE;
     try {
-      space = { ...DEFAULT_SPACE, ...JSON.parse(localStorage.getItem('monis_sims_space_v3') || 'null') };
+      space = { ...DEFAULT_SPACE, ...JSON.parse(localStorage.getItem(STORAGE_SPACE_KEY) || 'null') };
     } catch (e) {
       console.error(e);
     }
@@ -176,8 +177,8 @@ export default function App() {
   // Landing page bundle: lay the setup out in a 3 x 3 m room and open the 3D studio
   const handleSelectSetup = (setup: RoomSetup) => {
     try {
-      const saved = JSON.parse(localStorage.getItem('monis_sims_space_v3') || 'null');
-      localStorage.setItem('monis_sims_space_v3', JSON.stringify({ ...DEFAULT_SPACE, ...saved, ...setup.room }));
+      const saved = JSON.parse(localStorage.getItem(STORAGE_SPACE_KEY) || 'null');
+      localStorage.setItem(STORAGE_SPACE_KEY, JSON.stringify({ ...DEFAULT_SPACE, ...saved, ...setup.room }));
     } catch (e) {
       console.error(e);
     }

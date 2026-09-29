@@ -130,6 +130,7 @@ export function useStationScene(
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
+      renderer.forceContextLoss();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

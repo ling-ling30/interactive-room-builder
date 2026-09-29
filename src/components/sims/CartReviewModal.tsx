@@ -6,6 +6,7 @@ import { X, MessageCircle, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from '../../utils/soundEffects';
 import { useEscapeKey } from './hooks/useEscapeKey';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { AppleSelect } from './ui/AppleSelect';
 
 interface CartReviewModalProps {
@@ -56,12 +57,19 @@ export const CartReviewModal: React.FC<CartReviewModalProps> = ({
     setIsBooked(true);
   };
 
-  const generateWhatsAppMessage = () => {
-    const spaceSummary = `Space: ${spaceParams.width}m x ${spaceParams.length}m`;
-    const itemList = itemsWithProduct.map(i => `• ${i.product?.name} ($${isMonthly ? i.product?.monthlyRent : i.product?.weeklyRent})`).join('%0A');
-    const text = `Hi Monis Team! I designed my workspace on the 3D Simulator:%0A%0A*${spaceSummary}*%0A%0A*Items (${itemsWithProduct.length}):*%0A${itemList}%0A%0A*Plan:* ${isMonthly ? `Monthly ($${totalMonthly}/mo)` : `Weekly ($${totalWeekly}/wk)`}%0A*Delivery:* ${selectedZone.name}%0A*Total due:* $${initialTotal}`;
-    return `https://wa.me/6281234567890?text=${text}`;
-  };
+  const generateWhatsAppMessage = () =>
+    buildWhatsAppUrl([
+      'Hi Monis Team! I designed my workspace on the 3D Simulator:',
+      '',
+      `*Space: ${spaceParams.width}m x ${spaceParams.length}m*`,
+      '',
+      `*Items (${itemsWithProduct.length}):*`,
+      ...itemsWithProduct.map(i => `• ${i.product?.name} ($${isMonthly ? i.product?.monthlyRent : i.product?.weeklyRent})`),
+      '',
+      `*Plan:* ${isMonthly ? `Monthly ($${totalMonthly}/mo)` : `Weekly ($${totalWeekly}/wk)`}`,
+      `*Delivery:* ${selectedZone.name}`,
+      `*Total due:* $${initialTotal}`,
+    ]);
 
   return (
     <div

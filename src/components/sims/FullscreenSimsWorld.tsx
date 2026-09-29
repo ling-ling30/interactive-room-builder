@@ -16,6 +16,7 @@ import {
   Maximize2, Package, Armchair, Footprints, RotateCcw
 } from 'lucide-react';
 import { sounds } from '../../utils/soundEffects';
+import { STORAGE_SPACE_KEY } from '../../utils/storageKeys';
 
 interface FullscreenSimsWorldProps {
   catalog: SimsProduct[];
@@ -50,7 +51,6 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
   onOpenAdmin,
   initialWalkMode = false,
 }) => {
-  const STORAGE_SPACE_KEY = 'monis_sims_space_v3';
 
   const [spaceParams, setSpaceParams] = useState<SpaceParameters>(() => {
     try {

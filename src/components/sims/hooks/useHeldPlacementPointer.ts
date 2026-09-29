@@ -128,6 +128,23 @@ export function useHeldPlacementPointer({
       }
     }
 
+    // Fallback: mathematically intersect the Y=0 ground plane when the physical
+    // floor mesh raycast misses (cursor near walls or at steep camera angles).
+    // This guarantees items can always be placed at room edges.
+    if (!pt) {
+      const ray = raycasterRef.current.ray;
+      if (Math.abs(ray.direction.y) > 1e-6) {
+        const t = -ray.origin.y / ray.direction.y;
+        if (t > 0) {
+          pt = new THREE.Vector3(
+            ray.origin.x + ray.direction.x * t,
+            0,
+            ray.origin.z + ray.direction.z * t
+          );
+        }
+      }
+    }
+
     if (!pt) {
       if (hoverIndicatorRef.current) hoverIndicatorRef.current.visible = false;
       if (ghostMeshRef.current) ghostMeshRef.current.visible = false;

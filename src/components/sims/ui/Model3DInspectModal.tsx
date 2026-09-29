@@ -4,6 +4,7 @@ import { Model3DPreview } from './Model3DPreview';
 import { AppleDimensionAdjuster, type DimensionValues } from './AppleDimensionAdjuster';
 import { X, Box, Edit3, Copy, Layers, Ruler, Palette, Check, Save } from 'lucide-react';
 import { sounds } from '../../../utils/soundEffects';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface Model3DInspectModalProps {
   product: SimsProduct | null;
@@ -75,6 +76,8 @@ export const Model3DInspectModal: React.FC<Model3DInspectModalProps> = ({
       fitMode: liveDimensions.fitMode,
     };
   }, [product, currentColor, liveDimensions]);
+
+  useEscapeKey(isOpen && Boolean(product), onClose);
 
   if (!isOpen || !product || !calibratedProduct) return null;
 

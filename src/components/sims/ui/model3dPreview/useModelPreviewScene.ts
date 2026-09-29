@@ -163,6 +163,7 @@ export function useModelPreviewScene({
       cancelAnimationFrame(animId);
       resizeObserver.disconnect();
       renderer.dispose();
+      renderer.domElement.remove();
       stage.dispose();
       scene.clear();
       sceneRef.current = null;

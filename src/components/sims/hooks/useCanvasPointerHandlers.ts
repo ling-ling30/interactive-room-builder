@@ -1,4 +1,5 @@
 import type { Dispatch, MutableRefObject, PointerEvent as ReactPointerEvent, SetStateAction, WheelEvent as ReactWheelEvent } from 'react';
+import * as THREE from 'three';
 import type { SimsProduct, PlacedFurniture } from '../../../data/simsCatalog';
 import { sounds } from '../../../utils/soundEffects';
 import {
@@ -185,9 +186,21 @@ export function useCanvasPointerHandlers({
     if (!cameraRef.current || !mountRef.current || !floorMeshRef.current) return;
     raycasterRef.current.setFromCamera(clientToNdc(e.clientX, e.clientY, mountRef.current), cameraRef.current);
     const hits = raycasterRef.current.intersectObject(floorMeshRef.current);
-    if (hits.length === 0) return;
 
-    const pt = hits[0].point;
+    let pt: THREE.Vector3 | null = hits.length > 0 ? hits[0].point : null;
+
+    // Y=0 plane fallback when floor mesh raycast misses near walls
+    if (!pt) {
+      const ray = raycasterRef.current.ray;
+      if (Math.abs(ray.direction.y) > 1e-6) {
+        const t = -ray.origin.y / ray.direction.y;
+        if (t > 0) {
+          pt = new THREE.Vector3(ray.origin.x + ray.direction.x * t, 0, ray.origin.z + ray.direction.z * t);
+        }
+      }
+    }
+    if (!pt) return;
+
     const fp = getEffectiveFootprint(product, heldRotation);
     const targetGx = (pt.x + roomWidth / 2) - fp.width / 2;
     const targetGz = (pt.z + roomLength / 2) - fp.depth / 2;

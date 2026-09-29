@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, X } from 'lucide-react';
 import type { SimsProduct } from '../../../data/simsCatalog';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import type { ShowStatus } from './useAdminStatus';
 import type { useProductForm } from './useProductForm';
 import { ProductInfoSection } from './form/ProductInfoSection';
@@ -29,6 +30,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onInspectPreview,
 }) => {
   const { isOpen, editingItem, close, isCustomCategory, setIsCustomCategory, previewProduct } = formState;
+  useEscapeKey(isOpen, close);
   if (!isOpen) return null;
 
   return (

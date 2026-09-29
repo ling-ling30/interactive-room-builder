@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { SimsProduct } from '../../../../data/simsCatalog';
+import type { ModelType } from '../../../../data/modelTypes';
 import { getMaterial } from '../materials';
 import type { ModelBuilder } from './types';
 import { buildStandingDesk, buildCompactDesk, buildExecutiveDesk } from './desks';
@@ -30,7 +31,7 @@ import {
 } from './decor';
 
 /** modelType -> procedural builder. Add new furniture types here. */
-const PROCEDURAL_BUILDERS: Record<string, ModelBuilder> = {
+const PROCEDURAL_BUILDERS: Record<ModelType, ModelBuilder> = {
   standing_desk: buildStandingDesk,
   compact_desk: buildCompactDesk,
   executive_desk: buildExecutiveDesk,

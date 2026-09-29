@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type { SimsProduct, PlacedFurniture } from '../../data/simsCatalog';
 import type { SpaceParameters } from '../../types/space';
-import { BALI_DELIVERY_ZONES } from '../../data/defaultCatalog';
+import { BALI_DELIVERY_ZONES } from '../../data/deliveryZones';
 import { X, MessageCircle, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from '../../utils/soundEffects';
 import { useEscapeKey } from './hooks/useEscapeKey';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
+import { useDialogs } from '../../hooks/useDialogs';
 import { AppleSelect } from './ui/AppleSelect';
 
 interface CartReviewModalProps {
@@ -27,6 +29,9 @@ export const CartReviewModal: React.FC<CartReviewModalProps> = ({
   onClose,
 }) => {
   useEscapeKey(true, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, true);
+  const { confirm } = useDialogs();
 
   const [duration, setDuration] = useState<'weekly' | 'monthly'>('monthly');
   const [zoneId, setZoneId] = useState('canggu');
@@ -76,7 +81,7 @@ export const CartReviewModal: React.FC<CartReviewModalProps> = ({
       data-hud="true"
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#f0ece1]/75 backdrop-blur-md animate-fade-in overflow-y-auto select-none"
     >
-      <div className="bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl relative my-auto border border-slate-200 text-slate-900 overflow-hidden">
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Review and checkout" tabIndex={-1} className="outline-none bg-white rounded-3xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl relative my-auto border border-slate-200 text-slate-900 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -90,8 +95,8 @@ export const CartReviewModal: React.FC<CartReviewModalProps> = ({
           <div className="flex items-center gap-1">
             {itemsWithProduct.length > 0 && (
               <button
-                onClick={() => {
-                  if (window.confirm('Clear all placed equipment from the room?')) {
+                onClick={async () => {
+                  if (await confirm({ title: 'Clear room', message: 'Clear all placed equipment from the room?', confirmLabel: 'Clear all', danger: true })) {
                     sounds.playDelete();
                     onClearAll();
                   }

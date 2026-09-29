@@ -1,3 +1,4 @@
+import type { ModelType } from './modelTypes';
 export type SimsCategory = 'desks' | 'chairs' | 'tech' | 'lighting' | 'decor' | (string & {});
 
 export interface SimsProductVariant {
@@ -18,7 +19,7 @@ export interface SimsProduct {
   monthlyRent: number;
   deposit: number;
   brand: string;
-  modelType: string;
+  modelType: ModelType;
   layer: 'floor' | 'surface'; // 'floor' sits on tiles, 'surface' can sit on top of desks
   color: string;
   colorOptions?: string[];

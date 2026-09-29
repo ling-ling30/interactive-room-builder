@@ -1,4 +1,6 @@
 import type { SimsProduct, SimsCategory } from '../../../data/simsCatalog';
+import type { ModelType } from '../../../data/modelTypes';
+import { newId } from '../../../utils/ids';
 
 export interface ProductFormValues {
   name: string;
@@ -14,7 +16,7 @@ export interface ProductFormValues {
   deposit: number;
   layer: 'floor' | 'surface';
   color: string;
-  modelType: string;
+  modelType: ModelType;
   icon: string;
   description: string;
   material: string;
@@ -100,7 +102,7 @@ export function previewProductFromForm(v: ProductFormValues, editingItem: SimsPr
     layer: v.layer || 'floor',
     color: v.color || '#d4a373',
     colorOptions: [v.color || '#d4a373'],
-    modelType: v.modelType || 'standing_desk',
+    modelType: v.modelType,
     icon: v.icon || '📦',
     description: v.description || '',
     material: v.material || '',
@@ -116,7 +118,7 @@ export function productFromForm(v: ProductFormValues, editingItem: SimsProduct |
   const cleanCategory = (v.category.trim() || 'decor').toLowerCase() as SimsCategory;
 
   return {
-    id: editingItem ? editingItem.id : `monis-${cleanCategory}-${Date.now()}`,
+    id: editingItem ? editingItem.id : newId(`monis-${cleanCategory}`),
     name: v.name.trim(),
     brand: v.brand.trim() || 'Monis',
     category: cleanCategory,

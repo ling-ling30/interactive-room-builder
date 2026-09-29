@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { X, Keyboard } from 'lucide-react';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
@@ -69,6 +70,8 @@ const Key: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 /** Popup listing every mouse / keyboard control of the studio. Open with the Controls button or "?". */
 export const ControlsHelpModal: React.FC<ControlsHelpModalProps> = ({ onClose }) => {
   useEscapeKey(true, onClose);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(panelRef, true);
 
   return (
     <div
@@ -77,10 +80,13 @@ export const ControlsHelpModal: React.FC<ControlsHelpModalProps> = ({ onClose })
       onClick={onClose}
     >
       <div
+        ref={panelRef}
         data-hud="true"
         role="dialog"
+        aria-modal="true"
         aria-label="Studio controls"
-        className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#faf6ec] border border-[#e2d7bd] shadow-2xl p-5 sm:p-6 text-slate-900"
+        tabIndex={-1}
+        className="outline-none w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#faf6ec] border border-[#e2d7bd] shadow-2xl p-5 sm:p-6 text-slate-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-[#e2d7bd]">

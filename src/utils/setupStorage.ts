@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { DEFAULT_ROOM_SETUPS, type RoomSetup } from '../data/roomSetups';
+import { newId } from './ids';
 
 const STORAGE_KEY = 'monis_sims_setups_v1';
 
@@ -43,7 +44,7 @@ export function useRoomSetups() {
   const deleteSetup = useCallback((id: string) => update(prev => prev.filter(s => s.id !== id)), [update]);
   /** Copies any setup (built-in or custom) into an editable custom one. */
   const duplicateSetup = useCallback(
-    (setup: RoomSetup) => update(prev => [...prev, { ...setup, id: `custom-${Date.now()}`, name: `${setup.name} (Copy)`, badge: 'Custom', isCustom: true }]),
+    (setup: RoomSetup) => update(prev => [...prev, { ...setup, id: newId('custom'), name: `${setup.name} (Copy)`, badge: 'Custom', isCustom: true }]),
     [update]
   );
 

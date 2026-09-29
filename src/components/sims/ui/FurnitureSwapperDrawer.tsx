@@ -1,3 +1,4 @@
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { SimsProduct, PlacedFurniture, SimsCategory } from '../../../data/simsCatalog';
 import {
@@ -35,12 +36,16 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
   // Touch screens have no hover: a tap previews the option, "Apply" confirms it
   const isTouch = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches, []);
   const [pendingProduct, setPendingProduct] = useState<SimsProduct | null>(null);
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen);
     if (!isOpen) setPendingProduct(null);
-  }, [isOpen]);
+  }
 
   // Keyboard navigation: focus the equipped card as soon as the drawer opens, arrows move between cards
   const listRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(drawerRef, true);
   const openedForRef = useRef<string | null>(null);
   useEffect(() => {
     if (!isOpen || !selectedItem) {
@@ -119,7 +124,7 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
       />
 
       {/* Slide-in Drawer */}
-      <div className="relative pointer-events-auto w-full sm:max-w-lg h-[48vh] sm:h-full bg-[#0c1017]/95 backdrop-blur-2xl border-t sm:border-t-0 sm:border-l border-white/10 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col z-10 animate-slide-left text-white select-none">
+      <div ref={drawerRef} role="dialog" aria-modal="true" aria-label="Swap furniture" className="relative pointer-events-auto w-full sm:max-w-lg h-[48vh] sm:h-full bg-[#0c1017]/95 backdrop-blur-2xl border-t sm:border-t-0 sm:border-l border-white/10 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col z-10 animate-slide-left text-white select-none">
         {/* Drawer Header */}
         <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-black/30">
           <div className="flex items-center gap-3">
@@ -189,7 +194,10 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
               return (
                 <div
                   key={prod.id}
+                  role="button"
                   tabIndex={0}
+                  aria-pressed={isEquipped}
+                  aria-label={`${isEquipped ? 'Equipped: ' : 'Swap to '}${prod.name}`}
                   data-swap-card
                   data-equipped={isEquipped}
                   onClick={() => handleSelectProduct(prod)}
@@ -198,7 +206,10 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
                   onMouseLeave={() => onPreviewProduct?.(selectedItem.instanceId, null)}
                   onBlur={() => onPreviewProduct?.(selectedItem.instanceId, null)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSelectProduct(prod);
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelectProduct(prod);
+                    }
                   }}
                   className={`p-3.5 rounded-2xl border transition flex gap-3.5 items-center cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                     isEquipped

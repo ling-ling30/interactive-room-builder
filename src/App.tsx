@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { SIMS_CATALOG, DEFAULT_SIMS_ROOM } from './data/simsCatalog';
+import { toModelType } from './data/modelTypes';
 import type { SimsProduct, PlacedFurniture } from './data/simsCatalog';
 import { AppleShowcase } from './components/showcase/AppleShowcase';
-import { FullscreenSimsWorld } from './components/sims/FullscreenSimsWorld';
-import { SimsAdminManager } from './components/sims/SimsAdminManager';
-import { WorkstationStationModal } from './components/workstation/WorkstationStationModal';
 import { DEFAULT_SPACE } from './types/space';
 import { buildSetupItems, createSetupFromRoom, type RoomSetup } from './data/roomSetups';
 import { useRoomSetups } from './utils/setupStorage';
 import { STORAGE_SPACE_KEY } from './utils/storageKeys';
 import type { WorkstationConfig } from './types/workstation';
+
+// The 3D studio, CMS and workstation modal pull in Three.js: load them on demand, not with the landing page
+const FullscreenSimsWorld = lazy(() => import('./components/sims/FullscreenSimsWorld').then(m => ({ default: m.FullscreenSimsWorld })));
+const SimsAdminManager = lazy(() => import('./components/sims/SimsAdminManager').then(m => ({ default: m.SimsAdminManager })));
+const WorkstationStationModal = lazy(() => import('./components/workstation/WorkstationStationModal').then(m => ({ default: m.WorkstationStationModal })));
 
 const STORAGE_CATALOG_KEY = 'monis_sims_catalog_v9_scraped';
 const STORAGE_ROOM_KEY = 'monis_sims_room_v9_scraped';
@@ -23,7 +26,8 @@ export default function App() {
         // Only accept saved if it contains the real scraped items with photos
         if (Array.isArray(parsed) && parsed.length > 0 && parsed.some((p: SimsProduct) => Boolean(p.imageUrl))) {
           // Merge modelUrl and actualDimensions from SIMS_CATALOG for items that don't have custom overrides
-          const merged = parsed.map((item: SimsProduct) => {
+          const merged = parsed.map((raw: SimsProduct) => {
+            const item: SimsProduct = { ...raw, modelType: toModelType(raw.modelType) };
             const defaultItem = SIMS_CATALOG.find(d => d.id === item.id);
             if (defaultItem) {
               const res = { ...item };
@@ -254,6 +258,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen ${uiMode === 'fullscreen_sims' ? 'bg-[#0f121d] text-white' : 'bg-slate-50 text-slate-900'} font-sans antialiased selection:bg-slate-900 selection:text-white`}>
+      <Suspense fallback={<div className="fixed inset-0 grid place-items-center text-xs font-mono text-slate-500" role="status">Loading…</div>}>
       {/* 1. Default Showcase: Clean Monis Bali Landing Page */}
       {uiMode === 'showcase' && (
         <AppleShowcase
@@ -332,6 +337,7 @@ export default function App() {
           }}
         />
       )}
+      </Suspense>
     </div>
   );
 }

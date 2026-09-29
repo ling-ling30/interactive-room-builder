@@ -1,20 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { SimsProduct } from '../../../data/simsCatalog';
 
-export type SortKey = 'name' | 'category' | 'size' | 'monthly' | 'deposit';
-export type SortDir = 'asc' | 'desc';
-export type LayerFilter = 'all' | 'floor' | 'surface';
+import { DEFAULT_FILTERS, filterAndSortCatalog, type SortDir, type SortKey, type TableFilters } from './catalogFilter';
+
+export type { LayerFilter, SortDir, SortKey, TableFilters } from './catalogFilter';
 
 export const PAGE_SIZES = [10, 25, 50] as const;
 const PAGE_SIZE_KEY = 'monis_cms_page_size_v1';
-
-export interface TableFilters {
-  has3d: boolean;
-  hasPhoto: boolean;
-  layer: LayerFilter;
-}
-
-const DEFAULT_FILTERS: TableFilters = { has3d: false, hasPhoto: false, layer: 'all' };
 
 function loadPageSize(): number {
   try {
@@ -25,16 +17,6 @@ function loadPageSize(): number {
   }
 }
 
-const sortValue = (p: SimsProduct, key: SortKey): string | number => {
-  switch (key) {
-    case 'name': return p.name.toLowerCase();
-    case 'category': return (p.category || '').toLowerCase();
-    case 'size': return (p.actualDimensions?.widthM ?? p.footprint.width) * (p.actualDimensions?.depthM ?? p.footprint.depth);
-    case 'monthly': return p.monthlyRent || 0;
-    case 'deposit': return p.deposit || 0;
-  }
-};
-
 /** Search, category + attribute filters, sorting and pagination for the CMS catalog table. */
 export function useCatalogTable(catalog: SimsProduct[]) {
   const [search, setSearch] = useState('');
@@ -44,38 +26,14 @@ export function useCatalogTable(catalog: SimsProduct[]) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSizeState] = useState<number>(loadPageSize);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const rows = catalog.filter(item => {
-      if (category !== 'all' && item.category?.toLowerCase() !== category.toLowerCase()) return false;
-      if (filters.has3d && !item.modelUrl) return false;
-      if (filters.hasPhoto && !item.imageUrl) return false;
-      if (filters.layer !== 'all' && item.layer !== filters.layer) return false;
-      if (!q) return true;
-      return (
-        item.name.toLowerCase().includes(q) ||
-        item.brand.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q) ||
-        Boolean(item.material && item.material.toLowerCase().includes(q))
-      );
-    });
-    if (!sort) return rows;
-    const dir = sort.dir === 'asc' ? 1 : -1;
-    return [...rows].sort((a, b) => {
-      const av = sortValue(a, sort.key);
-      const bv = sortValue(b, sort.key);
-      if (av < bv) return -1 * dir;
-      if (av > bv) return 1 * dir;
-      return 0;
-    });
-  }, [catalog, search, category, filters, sort]);
+  const filtered = useMemo(
+    () => filterAndSortCatalog(catalog, { search, category, filters, sort }),
+    [catalog, search, category, filters, sort]
+  );
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   // Filters / deletions can shrink the list: never sit on a page that no longer exists
   const currentPage = Math.min(page, pageCount);
-  useEffect(() => {
-    if (page !== currentPage) setPage(currentPage);
-  }, [page, currentPage]);
 
   const pageItems = useMemo(
     () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),

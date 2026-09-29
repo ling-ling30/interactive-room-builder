@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { Box, X } from 'lucide-react';
 import type { SimsProduct } from '../../../data/simsCatalog';
 import { useEscapeKey } from '../hooks/useEscapeKey';
@@ -31,10 +32,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 }) => {
   const { isOpen, editingItem, close, isCustomCategory, setIsCustomCategory, previewProduct } = formState;
   useEscapeKey(isOpen, close);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, isOpen);
   if (!isOpen) return null;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Product form" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Product form" tabIndex={-1} className="outline-none fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl relative my-auto border border-slate-200 text-slate-900 max-h-[92vh] overflow-y-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">

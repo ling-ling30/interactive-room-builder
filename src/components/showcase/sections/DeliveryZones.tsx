@@ -1,5 +1,5 @@
 import React from 'react';
-import { BALI_DELIVERY_ZONES } from '../../../data/defaultCatalog';
+import { BALI_DELIVERY_ZONES } from '../../../data/deliveryZones';
 
 export const DeliveryZones: React.FC = () => (
   <section id="destinations" className="py-14 px-4 sm:px-8 bg-slate-100/70 border-t border-slate-200">

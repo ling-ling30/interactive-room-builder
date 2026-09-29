@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { PlacedFurniture } from '../../data/simsCatalog';
 import { sounds } from '../../utils/soundEffects';
 import { getEffectiveFootprint, gridToWorld, stepFurnitureRotation } from './three/spatialMath';
@@ -22,6 +22,7 @@ import { HeldItemIsland } from './ui/HeldItemIsland';
 import { HoverHintPill } from './ui/HoverHintPill';
 import { WalkModeHud } from './ui/WalkModeHud';
 import type { SimsRoomCanvasProps } from './simsRoomTypes';
+import { useLatest } from '../../hooks/useLatest';
 
 export type { LifecycleState, MovingGroupItem, MovingGroupState } from './simsRoomTypes';
 
@@ -48,7 +49,7 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
   onSetEyeHeight,
 }) => {
   const refs = useSimsRoomRefs();
-  const { mountRef, bubbleRef, movingInstanceIdRef, movingGroupRef } = refs;
+  const { mountRef, bubbleRef } = refs;
 
   const camera = useSimsCamera(initialWalkMode);
   const { cameraRef, isWalkMode, walkMove, walkToItem, toggleWalkMode } = camera;
@@ -57,7 +58,9 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
   const { selectedInstanceIds, setSelectedInstanceIds, selectedItems, selectedItem, selectedProduct, totalWeeklyRent } = selection;
 
   const placement = usePlacementState();
-  const { movingGroupCount, hoverTile, heldRotation, snapStep, centerSnapInfo, hoveredInstanceId, toggleSnapStep } = placement;
+  const { movingGroupCount, isMovingExisting, setIsMovingExisting, hoverTile, heldRotation, snapStep, centerSnapInfo, hoveredInstanceId, toggleSnapStep } = placement;
+  // Nothing held any more: whatever was being carried is no longer an existing item in transit
+  if (!heldProduct && isMovingExisting) setIsMovingExisting(false);
 
   const [isPanMode, setIsPanMode] = useState<boolean>(false);
 
@@ -67,20 +70,13 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
   const roomLength = Math.max(3, Math.round(space.length || 5));
 
   // Latest-value refs for the 60FPS loop and window-level event handlers
-  const isWalkModeRef = useRef<boolean>(isWalkMode);
-  isWalkModeRef.current = isWalkMode;
-  const isPanModeRef = useRef<boolean>(false);
-  isPanModeRef.current = isPanMode;
-  const walkMoveRef = useRef(walkMove);
-  walkMoveRef.current = walkMove;
-  const roomWidthRef = useRef(roomWidth);
-  roomWidthRef.current = roomWidth;
-  const roomLengthRef = useRef(roomLength);
-  roomLengthRef.current = roomLength;
-  const placedItemsRef = useRef<PlacedFurniture[]>(placedItems);
-  placedItemsRef.current = placedItems;
-  const selectedInstanceIdsRef = useRef<string[]>([]);
-  selectedInstanceIdsRef.current = selectedInstanceIds;
+  const isWalkModeRef = useLatest(isWalkMode);
+  const isPanModeRef = useLatest(isPanMode);
+  const walkMoveRef = useLatest(walkMove);
+  const roomWidthRef = useLatest(roomWidth);
+  const roomLengthRef = useLatest(roomLength);
+  const placedItemsRef = useLatest(placedItems);
+  const selectedInstanceIdsRef = useLatest(selectedInstanceIds);
 
   // Walking starts with a clean slate: the crosshair, not a selection, picks furniture
   useEffect(() => {
@@ -319,7 +315,7 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
       {heldProduct && (
         <HeldItemIsland
           heldProduct={heldProduct}
-          isMovingExisting={Boolean(movingInstanceIdRef.current || movingGroupRef.current)}
+          isMovingExisting={isMovingExisting}
           movingGroupCount={movingGroupCount}
           hoverTile={hoverTile}
           heldRotation={heldRotation}

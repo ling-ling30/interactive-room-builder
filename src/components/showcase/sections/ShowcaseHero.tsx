@@ -71,7 +71,16 @@ export const ShowcaseHero: React.FC<ShowcaseHeroProps> = ({ onToggleInteractiveW
 
       {/* Interactive 3D Teaser Card */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Open the interactive 3D room builder"
         onClick={onToggleInteractiveWorld}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggleInteractiveWorld();
+          }
+        }}
         className="apple-press group relative w-full max-w-4xl mt-12 sm:mt-16 rounded-3xl overflow-hidden bg-white border border-slate-200 cursor-pointer shadow-xl transition hover:shadow-2xl hover:border-slate-300"
       >
         <div className="relative aspect-[16/9] sm:aspect-[21/9] w-full bg-slate-900 flex items-center justify-center overflow-hidden">

@@ -39,6 +39,7 @@ export function usePlacedItemsSync({
     map.forEach((mesh, id) => {
       if (!activeIds.has(id)) {
         scene.remove(mesh);
+        disposeMeshes(mesh);
         map.delete(id);
       }
     });

@@ -1,7 +1,8 @@
-import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import * as THREE from 'three';
 import type { SimsProduct, PlacedFurniture } from '../../../data/simsCatalog';
 import { sounds } from '../../../utils/soundEffects';
+import { newId } from '../../../utils/ids';
 import {
   clampGridCoords,
   getEffectiveFootprint,
@@ -13,6 +14,7 @@ import { isSurfaceItem, positionHoverIndicator } from '../three/sceneHelpers';
 import type { MovingGroupItem } from '../simsRoomTypes';
 import type { SimsRoomRefs } from './useSimsRoomRefs';
 import type { PlacementState } from './usePlacementState';
+import { useLatest } from '../../../hooks/useLatest';
 
 interface UseFurnitureActionsParams {
   refs: SimsRoomRefs;
@@ -60,7 +62,7 @@ export function useFurnitureActions({
     isCopiedGroupRef,
     isDirectDraggingRef,
   } = refs;
-  const { hoverTile, heldRotation, snapStep, setMovingGroupCount, setHeldRotation, setHoverTile } = placement;
+  const { hoverTile, heldRotation, snapStep, setMovingGroupCount, setIsMovingExisting, setHeldRotation, setHoverTile } = placement;
 
   // Pick up single or multiple items as a coordinated group
   const handlePickupGroup = useCallback((groupItems: PlacedFurniture[], primaryItem: PlacedFurniture) => {
@@ -142,6 +144,7 @@ export function useFurnitureActions({
     movingInstanceIdRef.current = primaryItem.instanceId;
     originBackupRef.current = { ...primaryItem };
     setMovingGroupCount(items.length);
+    setIsMovingExisting(true);
     setHeldRotation(primaryItem.rotation);
 
     // Lock initial tile coordinates to primaryItem's grid location so items never vanish
@@ -164,7 +167,7 @@ export function useFurnitureActions({
       onPickupItem(primaryProd, primaryItem.rotation);
     }
     setSelectedInstanceIds([]);
-  }, [catalog, onPickupItem, roomWidth, roomLength]);
+  }, [catalog, onPickupItem, roomWidth, roomLength, movingGroupRef, movingInstanceIdRef, setSelectedInstanceIds, setHeldRotation, hoverIndicatorRef, placedItems, originBackupRef, setMovingGroupCount, setIsMovingExisting, setHoverTile, itemMeshesRef]);
 
   // Move / pick up a single existing placed item back into hand
   const handlePickupItem = useCallback((item: PlacedFurniture) => {
@@ -210,7 +213,7 @@ export function useFurnitureActions({
     isDirectDraggingRef.current = false;
     onCancelHeld();
     setSelectedInstanceIds([]);
-  }, [onCancelHeld, onUpdateItem, onDeleteItems, onDeleteItem]);
+  }, [onCancelHeld, onUpdateItem, onDeleteItems, onDeleteItem, movingGroupRef, setSelectedInstanceIds, isCopiedGroupRef, movingInstanceIdRef, itemMeshesRef, originBackupRef, setMovingGroupCount, isDirectDraggingRef]);
 
   // Resolve the desk surface height a held/placed item should rest on
   const resolveSurface = useCallback((
@@ -237,7 +240,7 @@ export function useFurnitureActions({
     return res.surfaceY > 0
       ? { surfaceY: res.surfaceY, mountedOnDeskId: res.deskId as string | undefined }
       : { surfaceY: 0, mountedOnDeskId: undefined as string | undefined };
-  }, [placedItems, catalog, roomWidth, roomLength]);
+  }, [placedItems, catalog, roomWidth, roomLength, itemMeshesRef]);
 
   // Direct drop / commit placement handler
   const handleDirectPlace = useCallback((targetTile?: { x: number; z: number }) => {
@@ -336,7 +339,7 @@ export function useFurnitureActions({
     const { surfaceY, mountedOnDeskId } = resolveSurface(heldProduct, gx, gz, fp);
 
     const newPlaced: PlacedFurniture = {
-      instanceId: `inst-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      instanceId: newId('inst'),
       productId: heldProduct.id,
       gridX: gx,
       gridZ: gz,
@@ -350,7 +353,7 @@ export function useFurnitureActions({
     onPlaceItem(newPlaced);
     setSelectedInstanceIds([newPlaced.instanceId]);
     onCancelHeld();
-  }, [hoverTile, heldProduct, heldRotation, roomWidth, roomLength, snapStep, placedItems, catalog, onPlaceItem, onUpdateItem, onCancelHeld, resolveSurface]);
+  }, [hoverTile, heldProduct, heldRotation, roomWidth, roomLength, snapStep, onPlaceItem, onUpdateItem, onCancelHeld, resolveSurface, movingGroupRef, setSelectedInstanceIds, movingInstanceIdRef, isCopiedGroupRef, itemMeshesRef, originBackupRef, isDirectDraggingRef, setMovingGroupCount]);
 
   // Duplicate selected item(s) together and immediately enter Move Mode
   const duplicateSelected = useCallback(() => {
@@ -361,8 +364,8 @@ export function useFurnitureActions({
     sounds.playPlace();
     const idMap = new Map<string, string>();
 
-    itemsToDuplicate.forEach((item, idx) => {
-      idMap.set(item.instanceId, `inst-${Date.now()}-${Math.floor(Math.random() * 10000)}-${idx}`);
+    itemsToDuplicate.forEach((item) => {
+      idMap.set(item.instanceId, newId('inst'));
     });
 
     const newPlacedItems: PlacedFurniture[] = [];
@@ -392,7 +395,7 @@ export function useFurnitureActions({
     isDirectDraggingRef.current = false;
     // Automatically enter move mode with newly copied items, waiting for drop click!
     handlePickupGroup(newPlacedItems, newPlacedItems[0]);
-  }, [selectedInstanceIds, placedItems, catalog, onPlaceItem, handlePickupGroup]);
+  }, [selectedInstanceIds, placedItems, catalog, onPlaceItem, handlePickupGroup, isCopiedGroupRef, isDirectDraggingRef]);
 
   // Delete selected item(s) together atomically
   const deleteSelected = useCallback(() => {
@@ -404,14 +407,13 @@ export function useFurnitureActions({
       selectedInstanceIds.forEach(id => onDeleteItem(id));
     }
     setSelectedInstanceIds([]);
-  }, [selectedInstanceIds, onDeleteItems, onDeleteItem]);
+  }, [selectedInstanceIds, onDeleteItems, onDeleteItem, setSelectedInstanceIds]);
 
   // Rotate the held item (and every member of a moving group) one step; plays the rotate sound
   // Latest held rotation, so rapid presses and re-renders never step from a stale value.
   // The group / ghost mutation must live outside the state updater: updaters can run twice
   // (StrictMode), which stepped moving-group items two times and left the dropped item rotated wrongly.
-  const heldRotationRef = useRef(heldRotation);
-  heldRotationRef.current = heldRotation;
+  const heldRotationRef = useLatest(heldRotation);
 
   const stepHeldRotation = useCallback((dir: 'cw' | 'ccw') => {
     sounds.playRotate();
@@ -433,7 +435,7 @@ export function useFurnitureActions({
         });
       }
     }
-  }, []);
+  }, [heldRotationRef, ghostMeshRef, movingGroupRef, setHeldRotation]);
 
   return {
     handlePickupGroup,

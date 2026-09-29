@@ -93,8 +93,10 @@ export const AdminCatalogTable: React.FC<AdminCatalogTableProps> = ({
                   {/* Visual & Name */}
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
-                      <div
+                      <button
+                        type="button"
                         onClick={() => inspect(item)}
+                        aria-label={`Inspect ${item.name} in 3D`}
                         className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden relative cursor-pointer hover:border-cyan-500 hover:shadow-sm transition group/thumb"
                         title="Click to inspect 3D Model"
                       >
@@ -120,16 +122,17 @@ export const AdminCatalogTable: React.FC<AdminCatalogTableProps> = ({
                         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity text-white">
                           <Eye className="w-4 h-4" />
                         </div>
-                      </div>
+                      </button>
                       <div className="min-w-0 max-w-xs">
                         <div className="font-bold text-slate-900 truncate flex items-center gap-1.5">
-                          <span
+                          <button
+                            type="button"
                             onClick={() => inspect(item)}
-                            className="hover:text-cyan-700 hover:underline cursor-pointer"
+                            className="truncate text-left hover:text-cyan-700 hover:underline cursor-pointer"
                             title="Inspect in 3D"
                           >
                             {item.name}
-                          </span>
+                          </button>
                           {item.modelUrl ? (
                             <button
                               type="button"

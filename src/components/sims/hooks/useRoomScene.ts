@@ -279,7 +279,7 @@ export function useRoomScene({
 
     // Auto-fit camera framing smoothly to new room dimensions
     fitRoomInView(roomWidth, roomLength);
-  }, [space, isNightMode, roomWidth, roomLength, space.wallColor, space.hasWindow, space.floorStyle, space.wallStyle, space.backdropColor, fitRoomInView]);
+  }, [space, isNightMode, roomWidth, roomLength, space.wallColor, space.hasWindow, space.floorStyle, space.wallStyle, space.backdropColor, fitRoomInView, floorMeshRef, skirtingGroupRef, windowGroupRef, wallsGroupRef, gridGroupRef, sceneRef]);
 
   return { sceneReady, bumpSceneReady };
 }

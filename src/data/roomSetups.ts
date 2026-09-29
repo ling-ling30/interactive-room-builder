@@ -1,5 +1,6 @@
 import type { SimsProduct, PlacedFurniture } from './simsCatalog';
 import type { SpaceParameters } from '../types/space';
+import { newId } from '../utils/ids';
 
 /**
  * Where an item goes in a setup. Positions are computed from each product's real dimensions
@@ -336,7 +337,7 @@ export function getSetupPricing(setup: RoomSetup, catalog: SimsProduct[]): Setup
 
 /** Resolves a setup into placeable furniture (dimension-based layout, or stored coordinates for saved rooms). */
 export function buildSetupItems(setup: RoomSetup, catalog: SimsProduct[]): PlacedFurniture[] {
-  const stamp = Date.now();
+  const stamp = newId('s');
   const byId = new Map(catalog.map(p => [p.id, p]));
   const layout = layoutSetup(setup, byId);
   const idFor = (index: number) => `inst-${setup.id}-${index}-${stamp}`;
@@ -406,7 +407,7 @@ export function createSetupFromRoom(
     mountedTo: p.mountedOnDeskId ? known.findIndex(k => k.instanceId === p.mountedOnDeskId) : undefined,
   })).map(i => (i.mountedTo === undefined || i.mountedTo < 0 ? { ...i, mountedTo: undefined } : i));
   return {
-    id: `custom-${Date.now()}`,
+    id: newId('custom'),
     name: input.name.trim() || 'My Setup',
     desc: input.desc?.trim() || `Saved room · ${items.length} items`,
     badge: input.badge?.trim() || 'Custom',

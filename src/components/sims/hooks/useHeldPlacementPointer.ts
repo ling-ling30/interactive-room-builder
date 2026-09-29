@@ -253,7 +253,7 @@ export function useHeldPlacementPointer({
       ghostMeshRef.current.rotation.y = !group || group.items.length <= 1 ? (heldRotation * Math.PI) / 180 : 0;
       ghostMeshRef.current.visible = true;
     }
-  }, [roomWidth, roomLength, heldProduct, heldRotation, snapStep, placedItems, catalog, cameraRef]);
+  }, [roomWidth, roomLength, heldProduct, heldRotation, snapStep, placedItems, catalog, cameraRef, ghostMeshRef, raycasterRef, mountRef, movingGroupRef, setHoverTile, movingInstanceIdRef, hoverIndicatorRef, setCenterSnapInfo, setHoveredInstanceId, itemMeshesRef, floorMeshRef]);
 
   // Support direct drag-and-drop from the bottom furniture store shelf into the 3D room
   useEffect(() => {
@@ -297,7 +297,7 @@ export function useHeldPlacementPointer({
       window.removeEventListener('pointermove', handleGlobalPointerMove);
       window.removeEventListener('pointerup', handleGlobalPointerUp);
     };
-  }, [heldProduct, updatePointer, handleDirectPlace]);
+  }, [heldProduct, updatePointer, handleDirectPlace, mountRef, isCopiedGroupRef, movingGroupRef, movingInstanceIdRef]);
 
   return { updatePointer };
 }

@@ -1,12 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+import { useLatest } from '../../../hooks/useLatest';
 
 // Open dialogs register here so a single Esc press only closes the topmost one.
 const escapeStack: symbol[] = [];
 
 /** Calls `onEscape` when Esc is pressed while `active`; with stacked dialogs only the most recently opened reacts. */
 export function useEscapeKey(active: boolean, onEscape: () => void) {
-  const handlerRef = useRef(onEscape);
-  handlerRef.current = onEscape;
+  const handlerRef = useLatest(onEscape);
 
   useEffect(() => {
     if (!active) return;
@@ -25,5 +25,5 @@ export function useEscapeKey(active: boolean, onEscape: () => void) {
       const idx = escapeStack.indexOf(id);
       if (idx !== -1) escapeStack.splice(idx, 1);
     };
-  }, [active]);
+  }, [active, handlerRef]);
 }

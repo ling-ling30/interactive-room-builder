@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Upload, CheckCircle2, Image as ImageIcon, Box, Eye, Ruler } from 'lucide-react';
 import type { SimsProduct } from '../../../../data/simsCatalog';
 import { sounds } from '../../../../utils/soundEffects';
+import { newId } from '../../../../utils/ids';
 import { saveModelToStorage } from '../../../../utils/modelStorage';
 import { AppleSelect } from '../../ui/AppleSelect';
 import { Model3DPreview } from '../../ui/Model3DPreview';
@@ -65,7 +66,7 @@ export const ProductMediaSection: React.FC<ProductMediaSectionProps> = ({
 
     try {
       showStatus(`Attaching ${file.name}...`);
-      const targetId = editingItem?.id || `prod-${Date.now()}`;
+      const targetId = editingItem?.id || newId('prod');
       const blobUrl = await saveModelToStorage(targetId, file, file.name);
 
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);

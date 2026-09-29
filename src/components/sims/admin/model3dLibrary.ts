@@ -1,3 +1,4 @@
+import type { ModelType } from '../../../data/modelTypes';
 import type { ProductFormValues } from './productForm';
 
 export const PUBLIC_3D_LIBRARY = [
@@ -18,20 +19,32 @@ export const PUBLIC_3D_LIBRARY = [
   { value: '/3dObject/computer_mouse_a4tech_bloody_v7.glb', label: 'A4Tech Bloody V7 Gaming Mouse', description: '6.8MB • Ergonomic Gaming Grip' },
 ];
 
-export const PROCEDURAL_MODEL_OPTIONS = [
+export const PROCEDURAL_MODEL_OPTIONS: { value: ModelType; label: string }[] = [
   { value: 'standing_desk', label: 'Motorized Standing Desk' },
   { value: 'executive_desk', label: 'Solid Walnut Executive Desk' },
   { value: 'compact_desk', label: 'Compact Crank Desk' },
   { value: 'highback_chair', label: 'Ergonomic Mesh Chair' },
   { value: 'aeron_chair', label: 'Aeron High-Performance Chair' },
-  { value: 'leather_chair', label: 'Leather Executive Chair' },
+  { value: 'active_stool', label: 'Active Sitting Stool' },
+  { value: 'lounge_chair', label: 'Lounge Chair' },
   { value: 'ultrawide_monitor', label: '34" Ultrawide Curved Monitor' },
   { value: 'dual_monitors', label: 'Dual 27" 4K Monitor Arms' },
   { value: 'single_monitor', label: 'Single 27" Studio Monitor' },
-  { value: 'light_screenbar', label: 'Screenbar Light Halo' },
-  { value: 'light_desk_lamp', label: 'Nordic Articulated Lamp' },
-  { value: 'plant_monstera', label: 'Potted Monstera Plant' },
-  { value: 'whiteboard_mobile', label: 'Mobile Whiteboard' },
+  { value: 'laptop_stand', label: 'Laptop Stand' },
+  { value: 'screenbar', label: 'Screenbar Light Halo' },
+  { value: 'desk_lamp', label: 'Nordic Articulated Lamp' },
+  { value: 'floor_lamp', label: 'Floor Lamp' },
+  { value: 'monstera_plant', label: 'Potted Monstera Plant' },
+  { value: 'jute_rug', label: 'Jute Rug' },
+  { value: 'bookshelf', label: 'Bookshelf' },
+  { value: 'standing_board', label: 'Mobile Whiteboard' },
+  { value: 'mechanical_keyboard', label: 'Mechanical Keyboard' },
+  { value: 'gaming_keyboard', label: 'Gaming Keyboard' },
+  { value: 'computer_mouse', label: 'Computer Mouse' },
+  { value: 'desk_mat', label: 'Desk Mat' },
+  { value: 'desk_organizer', label: 'Desk Organizer' },
+  { value: 'headphone_stand', label: 'Headphone Stand' },
+  { value: 'coffee_mug', label: 'Coffee Mug' },
 ];
 
 /** Form fields auto-filled (category, layer, footprint, true size, procedural preset) when a library model is picked. */
@@ -67,7 +80,7 @@ export function getPresetFieldsForModelPath(path: string): Partial<ProductFormVa
   if (path.includes('lamp')) {
     return {
       layer: 'surface', category: 'lighting', widthTiles: 0.5, depthTiles: 0.5,
-      actualWidthM: 0.35, actualDepthM: 0.18, actualHeightM: 0.45, modelType: 'light_desk_lamp',
+      actualWidthM: 0.35, actualDepthM: 0.18, actualHeightM: 0.45, modelType: 'desk_lamp',
     };
   }
   if (path.includes('monitor')) {

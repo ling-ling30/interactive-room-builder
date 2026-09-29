@@ -5,6 +5,7 @@ interface ShowcaseFooterProps {
   onToggleInteractiveWorld: () => void;
   onOpenAdmin: () => void;
 }
+const CURRENT_YEAR = new Date().getFullYear();
 
 export const ShowcaseFooter: React.FC<ShowcaseFooterProps> = ({ onToggleInteractiveWorld, onOpenAdmin }) => (
   <footer className="mt-auto bg-slate-900 text-white pt-14 pb-10 px-4 sm:px-8 border-t border-slate-800">
@@ -42,7 +43,7 @@ export const ShowcaseFooter: React.FC<ShowcaseFooterProps> = ({ onToggleInteract
     </div>
 
     <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
-      <div>© {new Date().getFullYear()} Monis Bali Technologies. All rights reserved.</div>
+      <div>© {CURRENT_YEAR} Monis Bali Technologies. All rights reserved.</div>
       <div className="flex items-center gap-4 text-slate-400">
         <span>Canggu</span>
         <span>·</span>

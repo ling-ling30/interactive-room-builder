@@ -6,6 +6,7 @@ import { usePreviewOrbit } from './model3dPreview/usePreviewOrbit';
 import { useModelPreviewScene } from './model3dPreview/useModelPreviewScene';
 import { PreviewBadges } from './model3dPreview/PreviewBadges';
 import { PreviewControls } from './model3dPreview/PreviewControls';
+import { useLatest } from '../../../hooks/useLatest';
 
 interface Model3DPreviewProps {
   product: Partial<SimsProduct>;
@@ -38,10 +39,8 @@ export const Model3DPreview: React.FC<Model3DPreviewProps> = ({
   const [isGridOn, setIsGridOn] = useState<boolean>(true);
 
   // Latest-value refs read by the render loop / model loader
-  const autoRotateRef = useRef(isAutoRotate);
-  autoRotateRef.current = isAutoRotate;
-  const isWireframeRef = useRef(isWireframe);
-  isWireframeRef.current = isWireframe;
+  const autoRotateRef = useLatest(isAutoRotate);
+  const isWireframeRef = useLatest(isWireframe);
 
   // Build full synthetic SimsProduct for mesh generation
   const activeColor = colorOverride || product.color || '#d4a373';

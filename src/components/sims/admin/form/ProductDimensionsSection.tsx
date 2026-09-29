@@ -1,3 +1,4 @@
+import { toModelType } from '../../../../data/modelTypes';
 import React from 'react';
 import { AppleSelect } from '../../ui/AppleSelect';
 import { PROCEDURAL_MODEL_OPTIONS } from '../model3dLibrary';
@@ -124,7 +125,7 @@ export const ProductDimensionsSection: React.FC<{ form: ProductFormApi }> = ({ f
           </label>
           <AppleSelect
             value={modelType}
-            onChange={(v) => set('modelType', v)}
+            onChange={(v) => set('modelType', toModelType(v))}
             options={PROCEDURAL_MODEL_OPTIONS}
             className="w-full"
             size="sm"

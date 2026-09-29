@@ -44,5 +44,5 @@ export function useWalkModeSync({
     if (walkToggleTrigger && walkToggleTrigger > 0) {
       toggleWalkMode(roomWidthRef.current, roomLengthRef.current);
     }
-  }, [walkToggleTrigger, toggleWalkMode]);
+  }, [walkToggleTrigger, toggleWalkMode, roomLengthRef, roomWidthRef]);
 }

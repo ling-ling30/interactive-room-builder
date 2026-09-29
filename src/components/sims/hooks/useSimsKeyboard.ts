@@ -235,23 +235,7 @@ export function useSimsKeyboard({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [
-    heldProduct,
-    selectedInstanceIds,
-    placedItems,
-    onUpdateItem,
-    handleCancelPlacement,
-    handlePickupGroup,
-    duplicateSelected,
-    deleteSelected,
-    toggleSnapStep,
-    toggleWalkMode,
-    rotateStep,
-    stepHeldRotation,
-    onWalkAction,
-    onWalkSwap,
-    onWalkMove,
-  ]);
+  }, [heldProduct, selectedInstanceIds, placedItems, onUpdateItem, handleCancelPlacement, handlePickupGroup, duplicateSelected, deleteSelected, toggleSnapStep, toggleWalkMode, rotateStep, stepHeldRotation, onWalkAction, onWalkSwap, onWalkMove, setSelectedInstanceIds, isWalkModeRef, setIsPanMode, keysRef, setHeldRotation, roomLengthRef, mountRef, isSpacePressedRef, roomWidthRef, isPanModeRef]);
 
   return { activeKeys };
 }

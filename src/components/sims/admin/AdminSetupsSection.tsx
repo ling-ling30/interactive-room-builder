@@ -3,6 +3,7 @@ import { Package, Save, Copy, Trash2 } from 'lucide-react';
 import type { SimsProduct } from '../../../data/simsCatalog';
 import { buildSetupItems, getSetupPricing, type RoomSetup } from '../../../data/roomSetups';
 import { sounds } from '../../../utils/soundEffects';
+import { useDialogs } from '../../../hooks/useDialogs';
 import { RoomLayoutPreview } from '../ui/RoomLayoutPreview';
 
 interface AdminSetupsSectionProps {
@@ -29,8 +30,10 @@ export const AdminSetupsSection: React.FC<AdminSetupsSectionProps> = ({
   onDuplicate,
   onDelete,
 }) => {
-  const saveCurrent = () => {
-    const name = window.prompt('Name for this setup (saved from the current studio room):', 'My Setup');
+  const { confirm, prompt } = useDialogs();
+
+  const saveCurrent = async () => {
+    const name = await prompt({ title: 'Save setup', message: 'Name for this setup (saved from the current studio room):', defaultValue: 'My Setup' });
     if (name === null) return;
     sounds.playPlace();
     onSaveCurrentRoom(name);
@@ -138,8 +141,8 @@ export const AdminSetupsSection: React.FC<AdminSetupsSectionProps> = ({
                 {isCustom && (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(`Delete the setup "${setup.name}"?`)) {
+                    onClick={async () => {
+                      if (await confirm({ title: 'Delete setup', message: `Delete the setup "${setup.name}"?`, confirmLabel: 'Delete', danger: true })) {
                         sounds.playDelete();
                         onDelete(setup.id);
                       }

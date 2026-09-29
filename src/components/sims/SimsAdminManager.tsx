@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import type { SimsProduct } from '../../data/simsCatalog';
 import { sounds } from '../../utils/soundEffects';
+import { newId } from '../../utils/ids';
+import { useDialogs } from '../../hooks/useDialogs';
 import { Model3DInspectModal } from './ui/Model3DInspectModal';
 import { AdminHeader } from './admin/AdminHeader';
 import { AdminKpiStrip } from './admin/AdminKpiStrip';
@@ -69,23 +71,25 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
   const handleDuplicate = (item: SimsProduct) => {
     onAddProduct({
       ...item,
-      id: `monis-${item.category}-${Date.now()}`,
+      id: newId(`monis-${item.category}`),
       name: `${item.name} (Copy)`,
     });
     sounds.playPlace();
     showStatus(`Duplicated "${item.name}"`);
   };
 
-  const handleDelete = (item: SimsProduct) => {
-    if (window.confirm(`Delete "${item.name}" from inventory?`)) {
+  const { confirm } = useDialogs();
+
+  const handleDelete = async (item: SimsProduct) => {
+    if (await confirm({ title: 'Delete item', message: `Delete "${item.name}" from inventory?`, confirmLabel: 'Delete', danger: true })) {
       sounds.playDelete();
       onDeleteProduct(item.id);
       showStatus(`Deleted "${item.name}"`);
     }
   };
 
-  const handleReset = () => {
-    if (window.confirm('Reset catalog back to initial crawled Monis equipment? Any custom changes will be replaced.')) {
+  const handleReset = async () => {
+    if (await confirm({ title: 'Reset catalog', message: 'Reset catalog back to initial crawled Monis equipment? Any custom changes will be replaced.', confirmLabel: 'Reset', danger: true })) {
       onResetCatalog();
       showStatus('Catalog reset to defaults');
     }

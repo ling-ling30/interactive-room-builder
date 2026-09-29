@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import type { SimsProduct } from '../../../data/simsCatalog';
 import { Model3DPreview } from './Model3DPreview';
 import { AppleDimensionAdjuster, type DimensionValues } from './AppleDimensionAdjuster';
@@ -44,20 +45,20 @@ export const Model3DInspectModal: React.FC<Model3DInspectModalProps> = ({
   });
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
-  // Sync initial dimensions when product opens
-  useEffect(() => {
-    if (product) {
-      setSelectedColor(null);
-      setLiveDimensions({
-        widthM: product.actualDimensions?.widthM ?? product.footprint.width ?? 1.2,
-        depthM: product.actualDimensions?.depthM ?? product.footprint.depth ?? 0.6,
-        heightM: product.actualDimensions?.heightM ?? (product.heightCm ? product.heightCm / 100 : 0.74),
-        scaleMultiplier: product.scaleMultiplier ?? 1.0,
-        fitMode: product.fitMode ?? (product.category === 'desks' ? 'exact' : 'proportional'),
-      });
-      setHasChanges(false);
-    }
-  }, [product]);
+  // Sync initial dimensions whenever a (new) product is opened; adjusted during render, not in an effect
+  const [syncedProduct, setSyncedProduct] = useState<SimsProduct | null>(null);
+  if (product && product !== syncedProduct) {
+    setSyncedProduct(product);
+    setSelectedColor(null);
+    setLiveDimensions({
+      widthM: product.actualDimensions?.widthM ?? product.footprint.width ?? 1.2,
+      depthM: product.actualDimensions?.depthM ?? product.footprint.depth ?? 0.6,
+      heightM: product.actualDimensions?.heightM ?? (product.heightCm ? product.heightCm / 100 : 0.74),
+      scaleMultiplier: product.scaleMultiplier ?? 1.0,
+      fitMode: product.fitMode ?? (product.category === 'desks' ? 'exact' : 'proportional'),
+    });
+    setHasChanges(false);
+  }
 
   const currentColor = selectedColor || product?.color || '#d4a373';
 
@@ -78,6 +79,8 @@ export const Model3DInspectModal: React.FC<Model3DInspectModalProps> = ({
   }, [product, currentColor, liveDimensions]);
 
   useEscapeKey(isOpen && Boolean(product), onClose);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, isOpen && Boolean(product));
 
   if (!isOpen || !product || !calibratedProduct) return null;
 
@@ -103,12 +106,14 @@ export const Model3DInspectModal: React.FC<Model3DInspectModalProps> = ({
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="3D model inspector"
+      tabIndex={-1}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fade-in select-none"
+      className="outline-none fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fade-in select-none"
     >
       <div className="bg-[#0f141f] border border-white/15 rounded-3xl max-w-5xl w-full shadow-2xl overflow-hidden flex flex-col md:flex-row text-white max-h-[94vh]">
         {/* Left: 3D Turntable Studio Viewport */}

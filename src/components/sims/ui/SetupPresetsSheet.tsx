@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { X, Package, ArrowRight, Save } from 'lucide-react';
 import type { SimsProduct, PlacedFurniture } from '../../../data/simsCatalog';
 import {
@@ -9,6 +10,7 @@ import {
 } from '../../../data/roomSetups';
 import { sounds } from '../../../utils/soundEffects';
 import { useEscapeKey } from '../hooks/useEscapeKey';
+import { useDialogs } from '../../../hooks/useDialogs';
 import { RoomLayoutPreview } from './RoomLayoutPreview';
 
 interface SetupPresetsSheetProps {
@@ -32,14 +34,17 @@ export const SetupPresetsSheet: React.FC<SetupPresetsSheetProps> = ({
   onClose,
 }) => {
   useEscapeKey(true, onClose);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(sheetRef, true);
+  const { prompt } = useDialogs();
 
   const apply = (setup: RoomSetup) => {
     onApplySetup(setup);
     onClose();
   };
 
-  const saveCurrent = () => {
-    const name = window.prompt('Name for this setup:', 'My Setup');
+  const saveCurrent = async () => {
+    const name = await prompt({ title: 'Save setup', message: 'Name for this setup:', defaultValue: 'My Setup' });
     if (name === null) return;
     sounds.playPlace();
     onSaveCurrentRoom(name);
@@ -47,7 +52,7 @@ export const SetupPresetsSheet: React.FC<SetupPresetsSheetProps> = ({
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[60] animate-fade-in" onPointerDown={(e) => e.stopPropagation()}>
-      <div className="mx-auto max-w-6xl bg-[#faf6ec]/98 backdrop-blur-xl border border-[#e2d7bd] border-b-0 rounded-t-3xl shadow-2xl px-4 sm:px-6 pt-4 pb-6">
+      <div ref={sheetRef} role="dialog" aria-modal="true" aria-label="Workspace setups" tabIndex={-1} className="outline-none mx-auto max-w-6xl bg-[#faf6ec]/98 backdrop-blur-xl border border-[#e2d7bd] border-b-0 rounded-t-3xl shadow-2xl px-4 sm:px-6 pt-4 pb-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center">

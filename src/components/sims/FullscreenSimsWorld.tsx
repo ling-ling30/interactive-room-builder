@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { sounds } from '../../utils/soundEffects';
 import { STORAGE_SPACE_KEY } from '../../utils/storageKeys';
+import { useDialogs } from '../../hooks/useDialogs';
 
 interface FullscreenSimsWorldProps {
   catalog: SimsProduct[];
@@ -162,16 +163,18 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
   };
 
   // Resize the virtual room to the setup's shell and lay out its furniture
-  const handleQuickReset = () => {
-    if (!window.confirm('Reset the room to the default layout? Your current furniture will be replaced.')) return;
+  const { confirm } = useDialogs();
+
+  const handleQuickReset = async () => {
+    if (!(await confirm({ title: 'Quick reset', message: 'Reset the room to the default layout? Your current furniture will be replaced.', confirmLabel: 'Reset', danger: true }))) return;
     sounds.playSelect();
     setSpaceParams(DEFAULT_SPACE);
     onReplaceRoom(DEFAULT_SIMS_ROOM.map(item => ({ ...item })));
   };
 
   // Confirms before replacing furniture, then lays out the setup
-  const requestApplySetup = (setup: RoomSetup) => {
-    if (placedItems.length > 0 && !window.confirm(`Replace the furniture in your room with "${setup.name}"?`)) return;
+  const requestApplySetup = async (setup: RoomSetup) => {
+    if (placedItems.length > 0 && !(await confirm({ title: 'Apply setup', message: `Replace the furniture in your room with "${setup.name}"?`, confirmLabel: 'Replace' }))) return;
     sounds.playPlace();
     handleApplySetup(setup);
   };

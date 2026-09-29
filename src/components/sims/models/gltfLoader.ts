@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { SimsProduct } from '../../../data/simsCatalog';
 import { getModelBlobUrl, getCompanionFileUrl } from '../../../utils/modelStorage';
 import { applyDimensionsToGltfModel } from './gltfDimensions';
@@ -49,11 +49,11 @@ async function loadRawGltfScene(url: string, productId: string): Promise<THREE.G
     });
 
     const loader = new GLTFLoader(manager);
-    const gltf = await new Promise<any>((resolve, reject) => {
+    const gltf = await new Promise<GLTF>((resolve, reject) => {
       loader.load(resolvedUrl, resolve, undefined, reject);
     });
 
-    const scene = gltf.scene as THREE.Group;
+    const scene = gltf.scene;
 
     // Ensure double-sided materials, shadows, and correct color space
     scene.traverse((child: THREE.Object3D) => {

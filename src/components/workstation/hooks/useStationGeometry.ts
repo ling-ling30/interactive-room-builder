@@ -50,5 +50,5 @@ export function useStationGeometry(config: WorkstationConfig, refs: StationScene
     if (config.showErgonomicsGuide && ergoGroup) {
       buildErgonomicsGuide(config, dims, ergoGroup);
     }
-  }, [config]);
+  }, [config, ergonomicsGroupRef, sceneRef, monitorsGroupRef, tabletopMeshRef, deskLightRef, legsGroupRef, accessoriesGroupRef, movingDeskGroupRef]);
 }

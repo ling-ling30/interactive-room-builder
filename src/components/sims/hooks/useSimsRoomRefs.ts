@@ -48,7 +48,7 @@ export function useSimsRoomRefs() {
 
   // Walk mode input / animation clock
   const keysRef = useRef<{ [code: string]: boolean }>({});
-  const lastTimeRef = useRef<number>(performance.now());
+  const lastTimeRef = useRef<number>(0);
   // Walk look without pointer lock: mouse offset from the view centre (-1..1) steers the camera
   const lookSteerRef = useRef({ x: 0, y: 0 });
 

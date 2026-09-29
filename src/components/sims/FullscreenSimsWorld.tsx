@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { SimsProduct, PlacedFurniture } from '../../data/simsCatalog';
+import { DEFAULT_SIMS_ROOM } from '../../data/simsCatalog';
 import type { SpaceParameters } from '../../types/space';
+import { buildSetupItems, createSetupFromRoom, type RoomSetup } from '../../data/roomSetups';
 import { DEFAULT_SPACE } from '../../types/space';
 import { SimsRoomCanvas } from './SimsRoomCanvas';
 import { SpaceDesignerPanel } from './SpaceDesignerPanel';
 import { CartReviewModal } from './CartReviewModal';
+import { SetupPresetsSheet } from './ui/SetupPresetsSheet';
+import { ControlsHelpModal } from './ui/ControlsHelpModal';
 import { FurnitureStoreSidebar } from './ui/FurnitureStoreSidebar';
 import { FurnitureSwapperDrawer } from './ui/FurnitureSwapperDrawer';
 import {
-  Sun, Moon, ArrowLeft, ShoppingBag,
-  Maximize2, Armchair, Footprints, RotateCcw, Compass
+  ArrowLeft, Keyboard, ShoppingBag,
+  Maximize2, Package, Armchair, Footprints, RotateCcw
 } from 'lucide-react';
 import { sounds } from '../../utils/soundEffects';
 
@@ -21,6 +25,11 @@ interface FullscreenSimsWorldProps {
   onDeleteItem: (instanceId: string) => void;
   onDeleteItems?: (instanceIds: string[]) => void;
   onClearRoom: () => void;
+  /** Built-in + saved room setups, and saving the current room as a new one. */
+  setups: RoomSetup[];
+  onSaveSetup: (setup: RoomSetup) => void;
+  /** Replaces every placed item (used when applying a room setup). */
+  onReplaceRoom: (items: PlacedFurniture[]) => void;
   onExitFullscreen: () => void;
   onOpenAdmin: () => void;
   initialWalkMode?: boolean;
@@ -34,11 +43,14 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
   onDeleteItem,
   onDeleteItems,
   onClearRoom,
+  setups,
+  onSaveSetup,
+  onReplaceRoom,
   onExitFullscreen,
   onOpenAdmin,
   initialWalkMode = false,
 }) => {
-  const STORAGE_SPACE_KEY = 'monis_sims_space_v2';
+  const STORAGE_SPACE_KEY = 'monis_sims_space_v3';
 
   const [spaceParams, setSpaceParams] = useState<SpaceParameters>(() => {
     try {
@@ -59,14 +71,44 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
 
   const [isSpacePanelOpen, setIsSpacePanelOpen] = useState<boolean>(false);
   const [isCartModalOpen, setIsCartModalOpen] = useState<boolean>(false);
-  const [isFurnitureStoreOpen, setIsFurnitureStoreOpen] = useState<boolean>(true);
+  const [isSetupSheetOpen, setIsSetupSheetOpen] = useState<boolean>(false);
+  const STORAGE_CONTROLS_SEEN_KEY = 'monis_sims_controls_seen_v1';
+  // Show the controls popup automatically the first time the studio opens
+  const [isControlsOpen, setIsControlsOpen] = useState<boolean>(() => {
+    try {
+      return !localStorage.getItem(STORAGE_CONTROLS_SEEN_KEY);
+    } catch {
+      return false;
+    }
+  });
+
+  const closeControls = () => {
+    setIsControlsOpen(false);
+    try {
+      localStorage.setItem(STORAGE_CONTROLS_SEEN_KEY, '1');
+    } catch {
+      // storage unavailable: popup simply shows again next time
+    }
+  };
+
+  // "?" opens the controls popup from anywhere in the studio
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (e.key === '?') setIsControlsOpen(prev => !prev);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+  const [isFurnitureStoreOpen, setIsFurnitureStoreOpen] = useState<boolean>(false);
   const [isWalkMode, setIsWalkMode] = useState<boolean>(Boolean(initialWalkMode));
   const [walkToggleTrigger, setWalkToggleTrigger] = useState<number>(0);
   const [eyeHeight, setEyeHeight] = useState<number>(1.65);
-  const [headingInfo, setHeadingInfo] = useState<{ degrees: number; cardinal: string }>({ degrees: 0, cardinal: 'N' });
   const [swappingItem, setSwappingItem] = useState<PlacedFurniture | null>(null);
+  // Swap drawer live preview: the hovered option is rendered in place without touching the saved room
+  const [swapPreview, setSwapPreview] = useState<{ instanceId: string; product: SimsProduct } | null>(null);
   const [heldProduct, setHeldProduct] = useState<SimsProduct | null>(null);
-  const [isNightMode, setIsNightMode] = useState<boolean>(false);
 
   // Quick swap handler: swap product while keeping coordinates and updating desk-mounted accessories
   const handleSwapProduct = (instanceId: string, newProduct: SimsProduct) => {
@@ -91,8 +133,21 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
       });
     }
 
+    setSwapPreview(null);
     setSwappingItem(null);
   };
+
+  // Items as the 3D room shows them: the previewed swap option replaces the item (and re-seats desk accessories)
+  const displayItems = useMemo(() => {
+    if (!swapPreview) return placedItems;
+    const { instanceId, product } = swapPreview;
+    const deskHeight = product.actualDimensions?.heightM ?? (product.heightCm ? product.heightCm / 100 : 0.75);
+    return placedItems.map(item => {
+      if (item.instanceId === instanceId) return { ...item, productId: product.id, color: product.color };
+      if (product.category === 'desks' && item.mountedOnDeskId === instanceId) return { ...item, surfaceY: deskHeight };
+      return item;
+    });
+  }, [placedItems, swapPreview]);
 
   // Price calculation for floating pill
   const itemsWithProduct = placedItems.map(item => ({
@@ -106,13 +161,39 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
     setSpaceParams(prev => ({ ...prev, ...updates }));
   };
 
+  // Resize the virtual room to the setup's shell and lay out its furniture
+  const handleQuickReset = () => {
+    if (!window.confirm('Reset the room to the default layout? Your current furniture will be replaced.')) return;
+    sounds.playSelect();
+    setSpaceParams(DEFAULT_SPACE);
+    onReplaceRoom(DEFAULT_SIMS_ROOM.map(item => ({ ...item })));
+  };
+
+  // Confirms before replacing furniture, then lays out the setup
+  const requestApplySetup = (setup: RoomSetup) => {
+    if (placedItems.length > 0 && !window.confirm(`Replace the furniture in your room with "${setup.name}"?`)) return;
+    sounds.playPlace();
+    handleApplySetup(setup);
+  };
+
+  const handleSaveCurrentRoom = (name: string) => {
+    const { width, length, floorStyle, wallColor, wallStyle, backdropColor } = spaceParams;
+    onSaveSetup(createSetupFromRoom({ name }, { width, length, floorStyle, wallColor, wallStyle, backdropColor }, placedItems, catalog));
+  };
+
+  const handleApplySetup = (setup: RoomSetup) => {
+    setSpaceParams(prev => ({ ...prev, ...setup.room }));
+    onReplaceRoom(buildSetupItems(setup, catalog));
+  };
+
   return (
     <div className="fixed inset-0 z-50 w-screen h-screen bg-[#0b0e15] overflow-hidden select-none touch-none">
       {/* 1. Fullscreen Three.js 3D Room Canvas */}
       <div className="absolute inset-0 z-10 w-full h-full">
         <SimsRoomCanvas
           catalog={catalog}
-          placedItems={placedItems}
+          placedItems={displayItems}
+          isSwapDrawerOpen={Boolean(swappingItem)}
           spaceParams={spaceParams}
           onPlaceItem={onPlaceItem}
           onUpdateItem={onUpdateItem}
@@ -121,7 +202,7 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
           heldProduct={heldProduct}
           onCancelHeld={() => setHeldProduct(null)}
           onPickupItem={(product) => setHeldProduct(product)}
-          isNightMode={isNightMode}
+          isNightMode={false}
           isSpaceDesignerOpen={isSpacePanelOpen}
           onSwapItem={(item) => {
             sounds.playSelect();
@@ -136,14 +217,13 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
           walkToggleTrigger={walkToggleTrigger}
           eyeHeight={eyeHeight}
           onSetEyeHeight={(h) => setEyeHeight(h)}
-          onHeadingChange={(info) => setHeadingInfo(info)}
         />
       </div>
 
       {/* 2. Monis Dynamic Floating Top Navigation */}
-      <header className="absolute top-4 inset-x-4 sm:inset-x-8 z-30 pointer-events-none flex items-center justify-between">
+      <header className="absolute top-3 sm:top-4 inset-x-3 sm:inset-x-8 z-30 pointer-events-none flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         {/* Left: Exit button, Space Designer Trigger & Walk in Studio Trigger */}
-        <div className="pointer-events-auto flex items-center gap-2">
+        <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={onExitFullscreen}
             className="apple-press bg-white/95 hover:bg-white text-slate-800 border border-slate-200/90 shadow-md flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold transition cursor-pointer"
@@ -161,7 +241,24 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
             className="apple-press bg-white/95 hover:bg-white text-slate-800 border border-slate-200/90 shadow-md flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold transition cursor-pointer"
           >
             <Maximize2 className="w-3.5 h-3.5 text-slate-700" />
-            <span>Room: {spaceParams.width}m × {spaceParams.length}m</span>
+            <span className="sm:hidden whitespace-nowrap">{spaceParams.width}×{spaceParams.length}</span>
+            <span className="hidden sm:inline">Room: {spaceParams.width}m × {spaceParams.length}m</span>
+          </button>
+
+          {/* Workspace Setups: bundle presets laid out in a virtual room */}
+          <button
+            onClick={() => {
+              sounds.playSelect();
+              setIsSetupSheetOpen(prev => !prev);
+            }}
+            className={`apple-press border shadow-md flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold transition cursor-pointer ${
+              isSetupSheetOpen
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white/95 hover:bg-white text-slate-800 border-slate-200/90'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Setups</span>
           </button>
 
           {/* Walk in Studio / Return to Orbit Trigger Button */}
@@ -180,30 +277,25 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
             {isWalkMode ? (
               <>
                 <RotateCcw className="w-3.5 h-3.5 text-slate-950" />
-                <span>Return to Orbit</span>
+                <span className="whitespace-nowrap">
+                  <span className="sm:hidden">Orbit</span>
+                  <span className="hidden sm:inline">Return to Orbit</span>
+                </span>
               </>
             ) : (
               <>
                 <Footprints className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Walk in Studio</span>
+                <span className="whitespace-nowrap">
+                  <span className="sm:hidden">Walk</span>
+                  <span className="hidden sm:inline">Walk in Studio</span>
+                </span>
               </>
             )}
           </button>
-
-
-
-          {/* When in Walk Mode: Compass Heading Chip */}
-          {isWalkMode && headingInfo && (
-            <div className="hidden lg:flex items-center gap-1.5 bg-[#0c1017]/85 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-white/10 text-xs shadow-md font-mono text-zinc-300 animate-fade-in">
-              <Compass className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-bold text-white">{headingInfo.cardinal}</span>
-              <span className="text-[10px] text-zinc-400">{headingInfo.degrees}°</span>
-            </div>
-          )}
         </div>
 
-        {/* Right: Store Toggle, Lighting, CMS & Step 3 Cart Pill */}
-        <div className="pointer-events-auto flex items-center gap-2">
+        {/* Right: Store Toggle, Controls, Reset, CMS & Step 3 Cart Pill (second row on phones) */}
+        <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 self-end sm:self-auto">
           {/* Toggle Furniture Store Sidebar */}
           <button
             onClick={() => {
@@ -221,13 +313,27 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
             <span className="hidden sm:inline">Furniture Store</span>
           </button>
 
-          {/* Day / Night toggle */}
+          {/* Controls popup */}
           <button
-            onClick={() => setIsNightMode(prev => !prev)}
-            className="apple-press bg-white/95 hover:bg-white p-2.5 rounded-full text-slate-700 border border-slate-200/90 transition shadow-md cursor-pointer"
-            title="Toggle Day/Night"
+            onClick={() => {
+              sounds.playSelect();
+              setIsControlsOpen(true);
+            }}
+            className="apple-press bg-white/95 hover:bg-white flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-slate-700 border border-slate-200/90 transition shadow-md cursor-pointer"
+            title="Show controls (?)"
           >
-            {isNightMode ? <Moon className="w-4 h-4 text-sky-500" /> : <Sun className="w-4 h-4 text-amber-500" />}
+            <Keyboard className="w-3.5 h-3.5 text-slate-600" />
+            <span className="hidden md:inline">Controls</span>
+          </button>
+
+          {/* Quick reset: restore the default room and layout */}
+          <button
+            onClick={handleQuickReset}
+            className="apple-press bg-white/95 hover:bg-white flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-slate-700 border border-slate-200/90 transition shadow-md cursor-pointer"
+            title="Quick reset: restore the default room and layout"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
+            <span className="hidden md:inline">Quick Reset</span>
           </button>
 
           <button
@@ -262,6 +368,9 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
         onSelectProduct={setHeldProduct}
         isOpen={isFurnitureStoreOpen}
         onToggleOpen={() => setIsFurnitureStoreOpen(prev => !prev)}
+        setups={setups}
+        onPickSetup={requestApplySetup}
+        onSeeAllSetups={() => setIsSetupSheetOpen(true)}
       />
 
       {/* 4. Step 1: Space Designer Drawer */}
@@ -270,6 +379,21 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
           spaceParams={spaceParams}
           onChangeSpace={handleUpdateSpace}
           onClose={() => setIsSpacePanelOpen(false)}
+        />
+      )}
+
+      {/* Controls popup */}
+      {isControlsOpen && <ControlsHelpModal onClose={closeControls} />}
+
+      {/* 4b. Workspace Setup bundles */}
+      {isSetupSheetOpen && (
+        <SetupPresetsSheet
+          setups={setups}
+          catalog={catalog}
+          placedItems={placedItems}
+          onApplySetup={requestApplySetup}
+          onSaveCurrentRoom={handleSaveCurrentRoom}
+          onClose={() => setIsSetupSheetOpen(false)}
         />
       )}
 
@@ -290,8 +414,12 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
         selectedItem={swappingItem}
         catalog={catalog}
         isOpen={Boolean(swappingItem)}
-        onClose={() => setSwappingItem(null)}
+        onClose={() => {
+          setSwapPreview(null);
+          setSwappingItem(null);
+        }}
         onSwapProduct={handleSwapProduct}
+        onPreviewProduct={(instanceId, product) => setSwapPreview(product ? { instanceId, product } : null)}
       />
     </div>
   );

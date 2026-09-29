@@ -7,14 +7,35 @@ import {
   Armchair
 } from 'lucide-react';
 import { sounds } from '../../../utils/soundEffects';
+import type { SimsProduct, PlacedFurniture } from '../../../data/simsCatalog';
 
 interface WalkModeHudProps {
+  /** Free-cursor mode (select / move objects) instead of mouse-look. */
+  isInteractMode: boolean;
+  /** Furniture under the crosshair (look mode). */
+  target: PlacedFurniture | null;
+  /** An item is being carried at the crosshair. */
+  isCarrying: boolean;
+  catalog: SimsProduct[];
+  /** Touch shortcuts that mirror the E / R keys. */
+  onSwap: () => void;
+  onMove: () => void;
+  onCancelCarry: () => void;
+  onRotateCarry: () => void;
   activeKeys: { [key: string]: boolean };
   onVirtualWalk: (forward: number, strafe: number) => void;
   onOpenStore?: () => void;
 }
 
 export const WalkModeHud: React.FC<WalkModeHudProps> = ({
+  isInteractMode,
+  target,
+  isCarrying,
+  catalog,
+  onSwap,
+  onMove,
+  onCancelCarry,
+  onRotateCarry,
   activeKeys,
   onVirtualWalk,
   onOpenStore,
@@ -22,9 +43,50 @@ export const WalkModeHud: React.FC<WalkModeHudProps> = ({
   return (
     <div className="absolute inset-0 pointer-events-none z-20 select-none flex flex-col justify-end p-4 sm:p-6">
       {/* Center Reticle / Crosshair Indicator for Looking & Interacting */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center">
-        <div className="w-2.5 h-2.5 rounded-full border border-white/60 bg-white/30 backdrop-blur-xs shadow-xs" />
-      </div>
+      {!isInteractMode && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center">
+          <div className="w-2.5 h-2.5 rounded-full border border-white/60 bg-white/30 backdrop-blur-xs shadow-xs" />
+        </div>
+      )}
+
+      {/* Crosshair target: name, price and the keys that act on it */}
+      {!isInteractMode && target && (() => {
+        const product = catalog.find(p => p.id === target.productId);
+        if (!product) return null;
+        return (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-5 pointer-events-none animate-fade-in max-w-[calc(100vw-16px)]">
+            <div className="apple-glass rounded-full pl-3 sm:pl-4 pr-2 py-1.5 border border-white/15 shadow-xl flex items-center gap-2 sm:gap-3 whitespace-nowrap">
+              <span className="text-xs font-bold text-white max-w-[110px] sm:max-w-[220px] truncate">{product.name}</span>
+              <span className="text-[11px] font-mono text-emerald-300">${product.weeklyRent}/wk</span>
+              <span className="hidden [@media(pointer:fine)]:flex items-center gap-1 text-[10px] text-zinc-300">
+                <kbd className="px-1.5 py-0.5 rounded-md bg-white/15 font-mono font-bold text-white">E</kbd>Swap
+                <kbd className="px-1.5 py-0.5 rounded-md bg-white/15 font-mono font-bold text-white ml-1">R</kbd>Move
+              </span>
+              <span className="hidden [@media(pointer:coarse)]:flex items-center gap-1.5 pointer-events-auto">
+                <button data-hud="true" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={onSwap} className="apple-press px-3 py-1 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-extrabold">Swap</button>
+                <button data-hud="true" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={onMove} className="apple-press px-3 py-1 rounded-full bg-white/20 text-white text-[11px] font-bold">Move</button>
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Carrying furniture at the crosshair */}
+      {!isInteractMode && isCarrying && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-6 pointer-events-none animate-fade-in">
+          <div className="apple-glass rounded-2xl px-3.5 py-2 border border-emerald-400/40 shadow-xl text-[10px] text-zinc-200 text-center">
+            <span className="hidden [@media(pointer:fine)]:inline">
+              Click or <kbd className="px-1.5 py-0.5 rounded border border-white/20 bg-white/10 font-mono font-bold">R</kbd> to place ·
+              Scroll to rotate · <kbd className="px-1.5 py-0.5 rounded border border-white/20 bg-white/10 font-mono font-bold">Esc</kbd> to cancel
+            </span>
+            <span className="hidden [@media(pointer:coarse)]:flex items-center gap-1.5 pointer-events-auto">
+              <button data-hud="true" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={onMove} className="apple-press px-3 py-1 rounded-full bg-emerald-500 text-slate-950 text-[11px] font-extrabold">Place</button>
+              <button data-hud="true" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={onRotateCarry} className="apple-press px-3 py-1 rounded-full bg-white/20 text-white text-[11px] font-bold">Rotate</button>
+              <button data-hud="true" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={onCancelCarry} className="apple-press px-3 py-1 rounded-full bg-white/10 text-white text-[11px] font-bold">Cancel</button>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Walk Controls & HUD */}
       <div
@@ -122,22 +184,27 @@ export const WalkModeHud: React.FC<WalkModeHudProps> = ({
               </span>
               <span>Walk</span>
               <span className="text-zinc-500">·</span>
-              <span
-                className={`px-1.5 py-0.5 rounded border ${
-                  activeKeys['ShiftLeft'] || activeKeys['ShiftRight']
-                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-bold'
-                    : 'bg-white/10 border-white/15'
-                }`}
-              >
-                Shift
-              </span>
-              <span>Sprint</span>
+              {!isInteractMode && (
+                <>
+                  <span className="px-1.5 py-0.5 rounded border bg-white/10 border-white/15">Mouse</span>
+                  <span className="text-emerald-400">Look</span>
+                  <span className="text-zinc-500">·</span>
+                </>
+              )}
+              <span className="px-1.5 py-0.5 rounded border bg-white/10 border-white/15">E</span>
+              <span className="text-emerald-400">Swap</span>
               <span className="text-zinc-500">·</span>
-              <span className="text-emerald-400">Drag to Look</span>
+              <span className="px-1.5 py-0.5 rounded border bg-white/10 border-white/15">R</span>
+              <span className="text-emerald-400">Move</span>
+              <span className="text-zinc-500">·</span>
+              <span className="px-1.5 py-0.5 rounded border bg-white/10 border-white/15">F</span>
+              <span className={isInteractMode ? 'text-amber-300' : 'text-zinc-300'}>
+                {isInteractMode ? 'Back to Look' : 'Free Cursor'}
+              </span>
             </div>
-            <div className="text-[10px] text-zinc-400 mt-1">
-              Collision & edge sliding active · Click any desk to Walk & Swap up close
-            </div>
+            {isInteractMode && (
+              <div className="text-[10px] text-zinc-400 mt-1">Click to select, drag to move furniture</div>
+            )}
           </div>
         </div>
 

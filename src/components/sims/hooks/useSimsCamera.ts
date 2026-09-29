@@ -48,6 +48,8 @@ export function useSimsCamera(initialWalkMode = false) {
   const [cameraAngleIndex, setCameraAngleIndex] = useState<number>(1);
   const cameraOrbitRef = useRef({ theta: Math.PI / 4, phi: 0.8, radius: 15 });
   const cameraTargetRef = useRef(new THREE.Vector3(0, 0.5, 0));
+  // Furthest the orbit camera may zoom out; follows the room size (set by fitRoomInView)
+  const maxRadiusRef = useRef<number>(40);
   const touchStartDistRef = useRef<number | null>(null);
   const touchLastCenterRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -391,13 +393,14 @@ export function useSimsCamera(initialWalkMode = false) {
   }, [updateCameraPosition]);
 
   const zoomOut = useCallback((delta = 2) => {
-    cameraOrbitRef.current.radius = Math.min(160, cameraOrbitRef.current.radius + delta);
+    cameraOrbitRef.current.radius = Math.min(maxRadiusRef.current, cameraOrbitRef.current.radius + delta);
     updateCameraPosition();
   }, [updateCameraPosition]);
 
   const fitRoomInView = useCallback((roomWidth: number, roomLength: number) => {
     const maxDim = Math.max(roomWidth, roomLength);
     const targetRadius = Math.max(12, Math.min(150, maxDim * 2.2));
+    maxRadiusRef.current = Math.min(160, Math.max(18, maxDim * 3.5));
     cameraOrbitRef.current.radius = targetRadius;
     cameraTargetRef.current.set(0, 0.5, 0); // Re-center on room center
     updateCameraPosition();
@@ -429,7 +432,7 @@ export function useSimsCamera(initialWalkMode = false) {
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.hypot(dx, dy);
         const delta = touchStartDistRef.current - dist;
-        cameraOrbitRef.current.radius = Math.max(4, Math.min(160, cameraOrbitRef.current.radius + delta * 0.05));
+        cameraOrbitRef.current.radius = Math.max(4, Math.min(maxRadiusRef.current, cameraOrbitRef.current.radius + delta * 0.05));
         touchStartDistRef.current = dist;
       }
 

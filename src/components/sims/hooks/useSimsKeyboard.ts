@@ -6,7 +6,7 @@ import type { SimsRoomRefs } from './useSimsRoomRefs';
 import type { PlacementState } from './usePlacementState';
 import type { useSimsCamera } from './useSimsCamera';
 
-const WALK_KEY_CODES = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'];
+const WALK_KEY_CODES = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
 // Optional Numpad 1–9 quick cardinal orientation shortcuts
 const NUMPAD_9_MAP: Record<string, number> = {
@@ -41,6 +41,12 @@ interface UseSimsKeyboardParams {
   handlePickupGroup: (groupItems: PlacedFurniture[], primaryItem: PlacedFurniture) => void;
   duplicateSelected: () => void;
   deleteSelected: () => void;
+  /** F key while walking: toggle the free-cursor interact mode. */
+  onWalkAction: () => void;
+  /** E while walking (look mode): swap the furniture under the crosshair. Returns true when handled. */
+  onWalkSwap: () => boolean;
+  /** R while walking (look mode): pick up / drop furniture at the crosshair. Returns true when handled. */
+  onWalkMove: () => boolean;
   /** Rotates held item(s); shared with the on-screen rotate buttons. */
   stepHeldRotation: (dir: 'cw' | 'ccw') => void;
 }
@@ -68,6 +74,9 @@ export function useSimsKeyboard({
   handlePickupGroup,
   duplicateSelected,
   deleteSelected,
+  onWalkAction,
+  onWalkSwap,
+  onWalkMove,
   stepHeldRotation,
 }: UseSimsKeyboardParams) {
   const { mountRef, keysRef, isSpacePressedRef } = refs;
@@ -90,9 +99,33 @@ export function useSimsKeyboard({
           setActiveKeys({ ...keysRef.current });
         }
         if (e.key === 'Escape') {
+          if (heldProduct) {
+            handleCancelPlacement();
+            return;
+          }
           toggleWalkMode(roomWidthRef.current, roomLengthRef.current);
           return;
         }
+        if ((e.key === 'e' || e.key === 'E') && !e.repeat && onWalkSwap()) {
+          e.preventDefault();
+          return;
+        }
+        if ((e.key === 'r' || e.key === 'R') && !e.repeat && onWalkMove()) {
+          e.preventDefault();
+          return;
+        }
+        if ((e.key === 'f' || e.key === 'F') && !e.repeat) {
+          e.preventDefault();
+          onWalkAction();
+          return;
+        }
+      }
+
+      // Hold Ctrl to pan the camera (same modifier state as Space)
+      if (e.key === 'Control' && !e.repeat && !isInput) {
+        isSpacePressedRef.current = true;
+        if (mountRef.current) mountRef.current.style.cursor = 'grab';
+        return;
       }
 
       if (e.code === 'Space' && !e.repeat && !isInput) {
@@ -188,7 +221,7 @@ export function useSimsKeyboard({
         }
       }
 
-      if (e.code === 'Space') {
+      if (e.code === 'Space' || e.key === 'Control') {
         isSpacePressedRef.current = false;
         if (mountRef.current) {
           mountRef.current.style.cursor = isPanModeRef.current ? 'grab' : 'crosshair';
@@ -215,6 +248,9 @@ export function useSimsKeyboard({
     toggleWalkMode,
     rotateStep,
     stepHeldRotation,
+    onWalkAction,
+    onWalkSwap,
+    onWalkMove,
   ]);
 
   return { activeKeys };

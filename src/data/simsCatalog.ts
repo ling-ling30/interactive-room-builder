@@ -744,7 +744,8 @@ export const SIMS_CATALOG: SimsProduct[] = [
   },
 ];
 
-export const DEFAULT_SIMS_ROOM: PlacedFurniture[] = [
+/** Default furniture layout, authored for a 3 x 3 m area (centred in the 4 x 4 m default room below). */
+const DEFAULT_ROOM_LAYOUT: PlacedFurniture[] = [
   // Electrical Adjustable Desk in center
   {
     instanceId: 'inst-desk-1',
@@ -843,3 +844,12 @@ export const DEFAULT_SIMS_ROOM: PlacedFurniture[] = [
     surfaceY: 0,
   },
 ];
+
+/** Offset that centres the 3 x 3 m layout in the 4 x 4 m default room. */
+const DEFAULT_ROOM_OFFSET = 0.5;
+
+export const DEFAULT_SIMS_ROOM: PlacedFurniture[] = DEFAULT_ROOM_LAYOUT.map(item => ({
+  ...item,
+  gridX: item.gridX + DEFAULT_ROOM_OFFSET,
+  gridZ: item.gridZ + DEFAULT_ROOM_OFFSET,
+}));

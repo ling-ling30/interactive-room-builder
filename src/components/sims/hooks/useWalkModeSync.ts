@@ -11,19 +11,17 @@ interface UseWalkModeSyncParams {
   walkToggleTrigger: number;
   onWalkModeChange?: (isWalk: boolean) => void;
   onSetEyeHeight?: (h: number) => void;
-  onHeadingChange?: (info: { degrees: number; cardinal: string }) => void;
 }
 
 /** Keeps walk mode, eye height, compass heading and the external toggle in sync with the parent. */
 export function useWalkModeSync({
-  camera: { isWalkMode, toggleWalkMode, eyeHeight, setEyeHeight, getHeading },
+  camera: { isWalkMode, toggleWalkMode, eyeHeight, setEyeHeight },
   roomWidthRef,
   roomLengthRef,
   eyeHeight: propEyeHeight,
   walkToggleTrigger,
   onWalkModeChange,
   onSetEyeHeight,
-  onHeadingChange,
 }: UseWalkModeSyncParams) {
   // Synchronize walk mode with parent container
   useEffect(() => {
@@ -40,16 +38,6 @@ export function useWalkModeSync({
   useEffect(() => {
     onSetEyeHeight?.(eyeHeight);
   }, [eyeHeight, onSetEyeHeight]);
-
-  // Synchronize compass heading with parent
-  useEffect(() => {
-    if (isWalkMode && onHeadingChange) {
-      const interval = setInterval(() => {
-        onHeadingChange(getHeading());
-      }, 150);
-      return () => clearInterval(interval);
-    }
-  }, [isWalkMode, onHeadingChange, getHeading]);
 
   // Respond to external walk toggle trigger from top navigation
   useEffect(() => {

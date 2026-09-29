@@ -1,18 +1,8 @@
 import * as THREE from 'three';
-import type { SimsProduct, PlacedFurniture } from '../../../data/simsCatalog';
+import type { SimsProduct } from '../../../data/simsCatalog';
 import type { SpaceParameters } from '../../../types/space';
-import type { WalkObstacle } from '../hooks/useSimsCamera';
 import type { MovingGroupState } from '../simsRoomTypes';
-import { getEffectiveFootprint, gridToWorld, isSmallItem, type FootprintDimensions } from './spatialMath';
-
-export const DEFAULT_SPACE: SpaceParameters = {
-  width: 5,
-  length: 5,
-  floorStyle: 'wood',
-  wallColor: '#f8f6f0',
-  hasWindow: true,
-  roomName: 'Bali Villa Studio',
-};
+import { gridToWorld, isSmallItem, type FootprintDimensions } from './spatialMath';
 
 /** Items that rest on desks rather than the floor. */
 export function isSurfaceItem(product: SimsProduct): boolean {
@@ -23,7 +13,8 @@ export function getWallColorHex(space: SpaceParameters, isNightMode: boolean): n
   return isNightMode ? 0x181e2b : parseInt((space.wallColor || '#f8f6f0').replace('#', '0x'));
 }
 
-const backgroundHex = (isNightMode: boolean) => (isNightMode ? 0x090c15 : 0xf0ece1);
+const backgroundHex = (isNightMode: boolean, backdropColor?: string) =>
+  isNightMode ? 0x090c15 : backdropColor ? new THREE.Color(backdropColor).getHex() : 0xf0ece1;
 
 function sunShadowExtent(maxDim: number) {
   return maxDim * 0.75 + 6;
@@ -62,19 +53,14 @@ export function addSceneLights(scene: THREE.Scene, maxDim: number, isNightMode: 
   scene.add(fillLight);
 }
 
-export function applySceneBackground(scene: THREE.Scene, maxDim: number, isNightMode: boolean) {
-  scene.background = new THREE.Color(backgroundHex(isNightMode));
-  scene.fog = new THREE.Fog(backgroundHex(isNightMode), maxDim * 2.2, maxDim * 7);
+export function applySceneBackground(scene: THREE.Scene, isNightMode: boolean, backdropColor?: string) {
+  scene.background = new THREE.Color(backgroundHex(isNightMode, backdropColor));
+  scene.fog = null;
 }
 
-/** Re-tints fog, background and lights when room size or day/night mode changes. */
-export function updateSceneTheme(scene: THREE.Scene, maxDim: number, isNightMode: boolean) {
-  if (scene.fog && scene.fog instanceof THREE.Fog) {
-    scene.fog.color.setHex(backgroundHex(isNightMode));
-    scene.fog.near = maxDim * 2.2;
-    scene.fog.far = maxDim * 7;
-  }
-  scene.background = new THREE.Color(backgroundHex(isNightMode));
+/** Re-tints background and lights when room size or day/night mode changes. */
+export function updateSceneTheme(scene: THREE.Scene, maxDim: number, isNightMode: boolean, backdropColor?: string) {
+  scene.background = new THREE.Color(backgroundHex(isNightMode, backdropColor));
 
   const ambient = scene.getObjectByName('ambient') as THREE.AmbientLight | null;
   if (ambient) {
@@ -161,38 +147,6 @@ export function positionHoverIndicator(
     indicator.scale.set(footprint.width, footprint.depth, 1);
     indicator.position.set(worldPos.x, y, worldPos.z);
   }
-}
-
-/** Floor furniture that blocks first-person walking (rugs / mats / surface items excluded). */
-export function collectWalkObstacles(
-  items: PlacedFurniture[],
-  catalog: SimsProduct[],
-  roomWidth: number,
-  roomLength: number
-): WalkObstacle[] {
-  const obstacles: WalkObstacle[] = [];
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const prod = catalog.find(p => p.id === item.productId);
-    if (!prod) continue;
-    if (prod.layer === 'surface' || prod.category === 'accessories') continue;
-
-    // Exclude rugs and floor mats so the player can freely walk directly on them
-    const isRugOrMat =
-      prod.modelType === 'jute_rug' ||
-      prod.category === 'rug' ||
-      prod.id.includes('rug') ||
-      prod.name.toLowerCase().includes('rug') ||
-      prod.name.toLowerCase().includes('carpet') ||
-      (prod.name.toLowerCase().includes('mat') && prod.layer === 'floor') ||
-      (prod.actualDimensions?.heightM !== undefined && prod.actualDimensions.heightM <= 0.05);
-    if (isRugOrMat) continue;
-
-    const fp = getEffectiveFootprint(prod, item.rotation);
-    const worldPos = gridToWorld(item.gridX, item.gridZ, fp.width, fp.depth, roomWidth, roomLength);
-    obstacles.push({ x: worldPos.x, z: worldPos.z, width: fp.width, depth: fp.depth });
-  }
-  return obstacles;
 }
 
 /** Spins & bobs the plumbob, keeping it above the last selected furniture. */

@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
-import type { SimsProduct, PlacedFurniture } from '../../data/simsCatalog';
+import React, { useEffect, useRef, useState } from 'react';
+import type { PlacedFurniture } from '../../data/simsCatalog';
 import { sounds } from '../../utils/soundEffects';
 import { getEffectiveFootprint, gridToWorld, stepFurnitureRotation } from './three/spatialMath';
-import { DEFAULT_SPACE } from './three/sceneHelpers';
+import { DEFAULT_SPACE } from '../../types/space';
 import { useSimsCamera } from './hooks/useSimsCamera';
 import { useSimsRoomRefs } from './hooks/useSimsRoomRefs';
 import { useSimsSelection } from './hooks/useSimsSelection';
@@ -15,6 +15,7 @@ import { useFurnitureActions } from './hooks/useFurnitureActions';
 import { useHeldPlacementPointer } from './hooks/useHeldPlacementPointer';
 import { useCanvasPointerHandlers } from './hooks/useCanvasPointerHandlers';
 import { useSimsKeyboard } from './hooks/useSimsKeyboard';
+import { useWalkInteract } from './hooks/useWalkInteract';
 import { CameraControlsHud } from './ui/CameraControlsHud';
 import { FloatingActionDeck } from './ui/FloatingActionDeck';
 import { HeldItemIsland } from './ui/HeldItemIsland';
@@ -38,13 +39,13 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
   isNightMode,
   isSpaceDesignerOpen,
   onSwapItem,
+  isSwapDrawerOpen = false,
   onOpenCart: _onOpenCart,
   initialWalkMode = false,
   onWalkModeChange,
   walkToggleTrigger = 0,
   eyeHeight: propEyeHeight,
   onSetEyeHeight,
-  onHeadingChange,
 }) => {
   const refs = useSimsRoomRefs();
   const { mountRef, bubbleRef, movingInstanceIdRef, movingGroupRef } = refs;
@@ -78,10 +79,13 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
   roomLengthRef.current = roomLength;
   const placedItemsRef = useRef<PlacedFurniture[]>(placedItems);
   placedItemsRef.current = placedItems;
-  const catalogRef = useRef<SimsProduct[]>(catalog);
-  catalogRef.current = catalog;
   const selectedInstanceIdsRef = useRef<string[]>([]);
   selectedInstanceIdsRef.current = selectedInstanceIds;
+
+  // Walking starts with a clean slate: the crosshair, not a selection, picks furniture
+  useEffect(() => {
+    if (isWalkMode) setSelectedInstanceIds([]);
+  }, [isWalkMode, setSelectedInstanceIds]);
 
   useWalkModeSync({
     camera,
@@ -91,7 +95,6 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
     walkToggleTrigger,
     onWalkModeChange,
     onSetEyeHeight,
-    onHeadingChange,
   });
 
   // Three.js scene + room architecture
@@ -104,8 +107,6 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
     camera,
     isWalkModeRef,
     walkMoveRef,
-    placedItemsRef,
-    catalogRef,
     roomWidthRef,
     roomLengthRef,
     selectedInstanceIdsRef,
@@ -155,6 +156,23 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
     handleDirectPlace,
   });
 
+  // Walk sub-modes: mouse-look (pointer locked, crosshair targeting) vs free-cursor interact (F)
+  const { isWalkInteract, isWalkInteractRef, walkTarget, onWalkAction, onWalkSwap, onWalkMove } = useWalkInteract({
+    refs,
+    cameraRef,
+    isWalkMode,
+    heldProduct,
+    placedItems,
+    catalog,
+    handlePickupItem,
+    handleDirectPlace,
+    updatePointer,
+    hoverTile,
+    walkLook: camera.walkLook,
+    onSwapItem,
+    isSwapDrawerOpen,
+  });
+
   const pointerHandlers = useCanvasPointerHandlers({
     refs,
     placement,
@@ -165,6 +183,7 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
     roomWidth,
     roomLength,
     isWalkModeRef,
+    isWalkInteractRef,
     isPanModeRef,
     placedItemsRef,
     selectedInstanceIdsRef,
@@ -173,6 +192,7 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
     handleDirectPlace,
     handlePickupGroup,
     handlePickupItem,
+    stepHeldRotation,
   });
 
   const { activeKeys } = useSimsKeyboard({
@@ -193,6 +213,9 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
     handlePickupGroup,
     duplicateSelected,
     deleteSelected,
+    onWalkAction,
+    onWalkSwap,
+    onWalkMove,
     stepHeldRotation,
   });
 
@@ -232,8 +255,6 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
       {/* Camera Angle & Zoom HUD with Pan Support & Walk Mode Toggle (Orbit mode only) */}
       {!isWalkMode && (
         <CameraControlsHud
-          cameraAngleIndex={camera.cameraAngleIndex}
-          onSetPreset={camera.setCameraPreset}
           onRotateStep={camera.rotateStep}
           onZoomIn={() => camera.zoomIn(2)}
           onZoomOut={() => camera.zoomOut(2)}
@@ -251,6 +272,14 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
       {/* Walk Mode HUD: first-person reticle and bottom controls guide & mobile D-pad */}
       {isWalkMode && (
         <WalkModeHud
+          isInteractMode={isWalkInteract}
+          target={walkTarget && !heldProduct ? walkTarget : null}
+          isCarrying={Boolean(heldProduct)}
+          catalog={catalog}
+          onSwap={() => { onWalkSwap(); }}
+          onMove={() => { onWalkMove(); }}
+          onCancelCarry={handleCancelPlacement}
+          onRotateCarry={() => stepHeldRotation('cw')}
           activeKeys={activeKeys}
           onVirtualWalk={(fwd, strafe) => walkMove(fwd, strafe, 0.05, roomWidth, roomLength)}
         />
@@ -260,7 +289,7 @@ export const SimsRoomCanvas: React.FC<SimsRoomCanvasProps> = ({
       {hoveredInstanceId && selectedInstanceIds.length === 0 && !heldProduct && !isWalkMode && <HoverHintPill />}
 
       {/* Floating 3D Action Pill directly ON TOP of the furniture (SELECTED state, single or multi) */}
-      {selectedInstanceIds.length > 0 && !heldProduct && (
+      {selectedInstanceIds.length > 0 && !heldProduct && (!isWalkMode || isWalkInteract) && (
         <FloatingActionDeck
           ref={bubbleRef}
           selectedProduct={selectedProduct}

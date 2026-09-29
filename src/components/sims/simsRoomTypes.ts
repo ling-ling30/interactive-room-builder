@@ -46,11 +46,12 @@ export interface SimsRoomCanvasProps {
   isNightMode: boolean;
   isSpaceDesignerOpen?: boolean;
   onSwapItem?: (item: PlacedFurniture) => void;
+  /** The swap drawer is open (walk mode returns to mouse-look when it closes). */
+  isSwapDrawerOpen?: boolean;
   onOpenCart?: () => void;
   initialWalkMode?: boolean;
   onWalkModeChange?: (isWalk: boolean) => void;
   walkToggleTrigger?: number;
   eyeHeight?: number;
   onSetEyeHeight?: (h: number) => void;
-  onHeadingChange?: (info: { degrees: number; cardinal: string }) => void;
 }

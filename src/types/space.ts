@@ -9,11 +9,22 @@ export interface SpaceParameters {
   wallStyle?: WallStyle;
   hasWindow: boolean;
   roomName: string;
+  /** Scene background / fog color behind the room (day mode). */
+  backdropColor?: string;
 }
 
+export const BACKDROP_OPTIONS = [
+  { color: '#f0ece1', name: 'Cream' },
+  { color: '#e8e2d4', name: 'Sand' },
+  { color: '#dfe8dc', name: 'Sage' },
+  { color: '#dbe5ee', name: 'Sky' },
+  { color: '#f3e3d8', name: 'Blush' },
+  { color: '#d9d9de', name: 'Stone' },
+];
+
 export const DEFAULT_SPACE: SpaceParameters = {
-  width: 5,
-  length: 5,
+  width: 4,
+  length: 4,
   floorStyle: 'wood',
   wallColor: '#f8f6f0',
   wallStyle: 'cutaway',

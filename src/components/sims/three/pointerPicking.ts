@@ -35,3 +35,19 @@ export function pickFurnitureAt(
   if (hits.length === 0) return null;
   return findFurnitureInstanceId(hits[0].object, itemMeshes);
 }
+
+/** Like `pickFurnitureAt` but also returns the distance from the camera to the hit point. */
+export function pickFurnitureHit(
+  raycaster: THREE.Raycaster,
+  camera: THREE.Camera,
+  mountEl: HTMLElement,
+  clientX: number,
+  clientY: number,
+  itemMeshes: Map<string, THREE.Group>
+): { instanceId: string; distance: number } | null {
+  raycaster.setFromCamera(clientToNdc(clientX, clientY, mountEl), camera);
+  const hits = raycaster.intersectObjects(Array.from(itemMeshes.values()), true);
+  if (hits.length === 0) return null;
+  const instanceId = findFurnitureInstanceId(hits[0].object, itemMeshes);
+  return instanceId ? { instanceId, distance: hits[0].distance } : null;
+}

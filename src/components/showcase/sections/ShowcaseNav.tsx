@@ -22,6 +22,7 @@ export const ShowcaseNav: React.FC<ShowcaseNavProps> = ({ onToggleInteractiveWor
       </div>
 
       <div className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600">
+        <a href="#setups" className="hover:text-slate-900 transition">Setups</a>
         <a href="#how-it-works" className="hover:text-slate-900 transition">How It Works</a>
         <a href="#catalog" className="hover:text-slate-900 transition">Equipment Fleet</a>
         <a href="#destinations" className="hover:text-slate-900 transition">Bali Delivery</a>

@@ -8,6 +8,7 @@ import {
   getEffectiveSnapStep,
   getTableSurfaceYUnder,
   gridToWorld,
+  isNearWall,
   isSmallItem,
 } from '../three/spatialMath';
 import { clientToNdc, findFurnitureInstanceId } from '../three/pointerPicking';
@@ -184,17 +185,20 @@ export function useHeldPlacementPointer({
       // Intelligent Magnetic Center Snap: perfectly centers chairs and monitors on desks
       // Small items (keyboards, mice, accessories) use a tighter threshold so corner/edge placement is effortless
       const snapThreshold = isSmallItem(heldProduct) ? 0.12 : 0.35;
-      const snapResult = findNearestCenterSnap(
-        gx,
-        gz,
-        fp,
-        placedItems,
-        catalog,
-        movingInstanceIdRef.current,
-        snapThreshold
-      );
+      // Wall placement wins: never let the magnetic snap pull an item away from a wall
+      const snapResult = isNearWall(gx, gz, fp.width, fp.depth, roomWidth, roomLength)
+        ? null
+        : findNearestCenterSnap(
+            gx,
+            gz,
+            fp,
+            placedItems,
+            catalog,
+            movingInstanceIdRef.current,
+            snapThreshold
+          );
 
-      if (snapResult.isSnapped) {
+      if (snapResult?.isSnapped) {
         gx = snapResult.x;
         gz = snapResult.z;
         setCenterSnapInfo({ isSnapped: true, targetDeskName: snapResult.targetDeskName });

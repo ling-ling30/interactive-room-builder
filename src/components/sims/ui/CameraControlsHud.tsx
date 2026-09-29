@@ -1,9 +1,6 @@
-import { Compass, ZoomIn, ZoomOut, Grid, Hand, RotateCw, RotateCcw, Crosshair, Footprints } from 'lucide-react';
-import { CAMERA_ANGLES } from '../hooks/useSimsCamera';
+import { ZoomIn, ZoomOut, Grid, Hand, RotateCw, RotateCcw, Crosshair, Footprints } from 'lucide-react';
 
 interface CameraControlsHudProps {
-  cameraAngleIndex: number;
-  onSetPreset: (index: number) => void;
   onRotateStep?: (direction: 'left' | 'right') => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -18,8 +15,6 @@ interface CameraControlsHudProps {
 }
 
 export function CameraControlsHud({
-  cameraAngleIndex,
-  onSetPreset,
   onRotateStep,
   onZoomIn,
   onZoomOut,
@@ -38,7 +33,7 @@ export function CameraControlsHud({
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      className={`absolute top-20 ${isOffset ? 'left-4 sm:left-[405px]' : 'left-4'} z-20 flex flex-wrap items-center gap-2 pointer-events-auto select-none transition-all duration-300`}
+      className={`absolute top-[104px] sm:top-20 ${isOffset ? 'left-4 sm:left-[405px]' : 'left-4'} z-20 flex flex-wrap items-center gap-2 pointer-events-auto select-none transition-all duration-300`}
     >
       {/* Walk Mode Toggle Button */}
       {onToggleWalkMode && (
@@ -56,9 +51,9 @@ export function CameraControlsHud({
         </button>
       )}
 
-      {/* 9 Directional Camera Presets (8 cardinal/corners + 1 Top-Down) */}
-      <div className="flex items-center gap-0.5 apple-glass p-1 rounded-2xl text-xs shadow-lg">
-        {onRotateStep && (
+      {/* Rotate the view in 45° steps (Q / E) */}
+      {onRotateStep && (
+        <div className="flex items-center gap-0.5 apple-glass p-1 rounded-2xl text-xs shadow-lg">
           <button
             onClick={() => onRotateStep('left')}
             className="apple-press p-1.5 rounded-xl hover:bg-white/10 text-zinc-300 hover:text-white transition cursor-pointer"
@@ -66,23 +61,6 @@ export function CameraControlsHud({
           >
             <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
           </button>
-        )}
-        <Compass className="w-3.5 h-3.5 text-emerald-400 ml-1 mr-0.5" />
-        {CAMERA_ANGLES.map((angle, idx) => (
-          <button
-            key={angle.name}
-            onClick={() => onSetPreset(idx)}
-            className={`px-2 py-1 rounded-xl font-mono text-[11px] font-medium transition cursor-pointer ${
-              cameraAngleIndex === idx
-                ? 'bg-white text-black font-bold shadow-xs'
-                : 'text-zinc-300 hover:text-white hover:bg-white/10'
-            }`}
-            title={`Rotate to ${angle.name}`}
-          >
-            {angle.shortLabel}
-          </button>
-        ))}
-        {onRotateStep && (
           <button
             onClick={() => onRotateStep('right')}
             className="apple-press p-1.5 rounded-xl hover:bg-white/10 text-zinc-300 hover:text-white transition cursor-pointer"
@@ -90,8 +68,8 @@ export function CameraControlsHud({
           >
             <RotateCw className="w-3.5 h-3.5 text-emerald-400" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Orbit vs Pan Mode Toggle */}
       {onTogglePanMode && (

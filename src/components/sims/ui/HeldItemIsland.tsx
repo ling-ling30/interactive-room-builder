@@ -40,7 +40,7 @@ export function HeldItemIsland({
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      className={`absolute top-20 left-1/2 -translate-x-1/2 z-30 apple-glass rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3 border transition-colors duration-200 pointer-events-auto select-none ${
+      className={`absolute top-[104px] sm:top-20 left-1/2 -translate-x-1/2 z-30 apple-glass rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3 border transition-colors duration-200 pointer-events-auto select-none ${
         isCenterSnapped ? 'border-cyan-400 bg-cyan-950/40 shadow-cyan-500/20' : 'border-emerald-400/60'
       }`}
     >

@@ -179,6 +179,27 @@ export function clampGridCoords(
   return { x: snappedX, z: snappedZ };
 }
 
+/**
+ * True when the footprint's edge is within `threshold` metres of any room wall.
+ * Used to let wall placement win over the magnetic desk-centre snap.
+ */
+export function isNearWall(
+  gx: number,
+  gz: number,
+  fpW: number,
+  fpD: number,
+  roomWidth: number,
+  roomLength: number,
+  threshold = 0.3
+): boolean {
+  return (
+    gx < threshold ||
+    gz < threshold ||
+    roomWidth - (gx + fpW) < threshold ||
+    roomLength - (gz + fpD) < threshold
+  );
+}
+
 export interface CenterSnapResult {
   x: number;
   z: number;

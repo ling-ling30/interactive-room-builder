@@ -8,6 +8,8 @@ import { AdminKpiStrip } from './admin/AdminKpiStrip';
 import { AdminFilterBar } from './admin/AdminFilterBar';
 import { AdminCatalogTable } from './admin/AdminCatalogTable';
 import { ProductFormModal } from './admin/ProductFormModal';
+import { AdminSetupsSection } from './admin/AdminSetupsSection';
+import type { RoomSetupsApi } from '../../utils/setupStorage';
 import { productFromForm } from './admin/productForm';
 import { useAdminStatus } from './admin/useAdminStatus';
 import { useProductForm } from './admin/useProductForm';
@@ -22,6 +24,10 @@ interface SimsAdminManagerProps {
   onImportCatalog: (jsonStr: string) => boolean;
   onBackToSims: () => void;
   onBackToShowcase?: () => void;
+  /** Room setups store and the studio room the CMS can snapshot as a new setup. */
+  roomSetups: RoomSetupsApi;
+  currentRoomItemCount: number;
+  onSaveCurrentRoomAsSetup: (name: string) => void;
 }
 
 export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
@@ -34,6 +40,9 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
   onImportCatalog,
   onBackToSims,
   onBackToShowcase,
+  roomSetups,
+  currentRoomItemCount,
+  onSaveCurrentRoomAsSetup,
 }) => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -171,6 +180,16 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
         onDuplicate={handleDuplicate}
         onEdit={openEdit}
         onDelete={handleDelete}
+      />
+
+      <AdminSetupsSection
+        setups={roomSetups.setups}
+        catalog={catalog}
+        currentRoomItemCount={currentRoomItemCount}
+        onSaveCurrentRoom={onSaveCurrentRoomAsSetup}
+        onUpdate={roomSetups.updateSetup}
+        onDuplicate={roomSetups.duplicateSetup}
+        onDelete={roomSetups.deleteSetup}
       />
 
       <ProductFormModal

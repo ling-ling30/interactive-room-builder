@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { sounds } from '../../../utils/soundEffects';
 import { AppleSelect } from './AppleSelect';
+import { SetupQuickPicks } from './SetupQuickPicks';
+import type { RoomSetup } from '../../../data/roomSetups';
 
 interface FurnitureStoreSidebarProps {
   catalog: SimsProduct[];
@@ -17,6 +19,9 @@ interface FurnitureStoreSidebarProps {
   onSelectProduct: (product: SimsProduct | null) => void;
   isOpen: boolean;
   onToggleOpen: () => void;
+  setups: RoomSetup[];
+  onPickSetup: (setup: RoomSetup) => void;
+  onSeeAllSetups: () => void;
 }
 
 const DEFAULT_CATEGORIES: { id: string; label: string; icon: string }[] = [
@@ -35,6 +40,9 @@ export const FurnitureStoreSidebar: React.FC<FurnitureStoreSidebarProps> = ({
   onSelectProduct,
   isOpen,
   onToggleOpen,
+  setups,
+  onPickSetup,
+  onSeeAllSetups,
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,7 +90,7 @@ export const FurnitureStoreSidebar: React.FC<FurnitureStoreSidebarProps> = ({
             sounds.playSelect();
             onToggleOpen();
           }}
-          className="fixed right-4 top-20 z-30 apple-press bg-white hover:bg-slate-50 border border-slate-200/90 shadow-xl flex items-center gap-2.5 px-4 py-2.5 rounded-full text-slate-900 text-xs font-bold transition group cursor-pointer"
+          className="fixed right-4 top-20 z-30 apple-press bg-white hover:bg-slate-50 border border-slate-200/90 shadow-xl hidden sm:flex items-center gap-2.5 px-4 py-2.5 rounded-full text-slate-900 text-xs font-bold transition group cursor-pointer"
           title="Open Furniture Catalog"
         >
           <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -207,6 +215,9 @@ export const FurnitureStoreSidebar: React.FC<FurnitureStoreSidebarProps> = ({
             })}
           </div>
         </div>
+
+        {/* Ready-made setups (3 x 3 m bundles) */}
+        <SetupQuickPicks setups={setups} catalog={catalog} onPickSetup={onPickSetup} onSeeAll={onSeeAllSetups} />
 
         {/* Drag Hint Banner */}
         <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-700 shrink-0">

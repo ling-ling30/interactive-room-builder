@@ -28,7 +28,11 @@ export function useGhostMesh({ refs, heldProduct, heldRotation, hoverTile, roomW
       ghostMeshRef.current = null;
     }
 
-    if (!heldProduct) return;
+    if (!heldProduct) {
+      // Nothing held any more: the green footprint tile must not stay behind
+      if (hoverIndicatorRef.current) hoverIndicatorRef.current.visible = false;
+      return;
+    }
 
     const rootGhost = new THREE.Group();
     rootGhost.name = '__ghost_mesh_root__';

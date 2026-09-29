@@ -1,6 +1,6 @@
 import React from 'react';
 import type { SpaceParameters, FloorStyle } from '../../types/space';
-import { SPACE_PRESETS } from '../../types/space';
+import { SPACE_PRESETS, BACKDROP_OPTIONS } from '../../types/space';
 import { Maximize2, X, Check } from 'lucide-react';
 import { sounds } from '../../utils/soundEffects';
 
@@ -33,7 +33,7 @@ export const SpaceDesignerPanel: React.FC<SpaceDesignerPanelProps> = ({
   ];
 
   return (
-    <div className="fixed inset-y-0 left-0 z-50 w-full max-w-sm bg-white/98 text-slate-900 border-r border-slate-200 p-5 shadow-2xl flex flex-col justify-between overflow-y-auto animate-fade-in select-none">
+    <div className="fixed inset-y-0 left-0 z-50 w-full max-w-sm bg-[#faf6ec] text-slate-900 border-r border-[#e2d7bd] p-5 shadow-2xl flex flex-col justify-between overflow-y-auto animate-fade-in select-none">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
@@ -268,6 +268,36 @@ export const SpaceDesignerPanel: React.FC<SpaceDesignerPanelProps> = ({
                 <span className="text-[9px] font-bold text-slate-600">{wc.name.split(' ')[0]}</span>
               </button>
             ))}
+          </div>
+        </div>
+        {/* Room Background (scene backdrop behind the room) */}
+        <div className="mb-4">
+          <label className="block text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-wider font-mono">
+            Room Background
+          </label>
+          <div className="flex items-center gap-3 flex-wrap">
+            {BACKDROP_OPTIONS.map(bd => {
+              const isSel = (spaceParams.backdropColor ?? BACKDROP_OPTIONS[0].color) === bd.color;
+              return (
+                <button
+                  key={bd.color}
+                  type="button"
+                  onClick={() => {
+                    sounds.playSelect();
+                    onChangeSpace({ backdropColor: bd.color });
+                  }}
+                  className={`apple-press flex flex-col items-center gap-1 p-1 rounded-xl transition cursor-pointer ${
+                    isSel ? 'scale-110' : 'opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full border-2 shadow-sm"
+                    style={{ backgroundColor: bd.color, borderColor: isSel ? '#0f172a' : '#cbd5e1' }}
+                  />
+                  <span className="text-[9px] font-bold text-slate-600">{bd.name}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

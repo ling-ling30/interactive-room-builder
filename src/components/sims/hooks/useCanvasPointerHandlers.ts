@@ -7,6 +7,7 @@ import {
   findNearestCenterSnap,
   getEffectiveFootprint,
   getEffectiveSnapStep,
+  isNearWall,
   isSmallItem,
 } from '../three/spatialMath';
 import { clientToNdc, pickFurnitureAt } from '../three/pointerPicking';
@@ -26,6 +27,8 @@ interface UseCanvasPointerHandlersParams {
   roomWidth: number;
   roomLength: number;
   isWalkModeRef: MutableRefObject<boolean>;
+  /** Walk sub-mode: true = free cursor (select / move objects), false = mouse-look. */
+  isWalkInteractRef: MutableRefObject<boolean>;
   isPanModeRef: MutableRefObject<boolean>;
   placedItemsRef: MutableRefObject<PlacedFurniture[]>;
   selectedInstanceIdsRef: MutableRefObject<string[]>;
@@ -34,6 +37,7 @@ interface UseCanvasPointerHandlersParams {
   handleDirectPlace: (targetTile?: { x: number; z: number }) => void;
   handlePickupGroup: (groupItems: PlacedFurniture[], primaryItem: PlacedFurniture) => void;
   handlePickupItem: (item: PlacedFurniture) => void;
+  stepHeldRotation: (dir: 'cw' | 'ccw') => void;
 }
 
 /** DOM pointer / wheel handlers for the canvas wrapper: orbit, pan, select, drag-to-move, drop. */
@@ -47,6 +51,7 @@ export function useCanvasPointerHandlers({
   roomWidth,
   roomLength,
   isWalkModeRef,
+  isWalkInteractRef,
   isPanModeRef,
   placedItemsRef,
   selectedInstanceIdsRef,
@@ -55,6 +60,7 @@ export function useCanvasPointerHandlers({
   handleDirectPlace,
   handlePickupGroup,
   handlePickupItem,
+  stepHeldRotation,
 }: UseCanvasPointerHandlersParams) {
   const {
     mountRef,
@@ -72,6 +78,7 @@ export function useCanvasPointerHandlers({
     pointerStartRef,
     lastPointerPosRef,
     isSpacePressedRef,
+    lookSteerRef,
   } = refs;
   const { heldRotation, snapStep, hoverTile, setHoverTile } = placement;
 
@@ -96,11 +103,13 @@ export function useCanvasPointerHandlers({
     didDragRef.current = false;
     lastPointerPosRef.current = { x: e.clientX, y: e.clientY };
 
-    if (isWalkModeRef.current) return;
+    const inWalk = isWalkModeRef.current;
+    // Walk mouse-look: no picking or dragging
+    if (inWalk && !isWalkInteractRef.current) return;
     if (heldProduct) return;
 
-    // Shift+Left Click is reserved for multi-select, not camera pan!
-    const shouldPan = e.button === 2 || e.button === 1 || isSpacePressedRef.current || isPanModeRef.current;
+    // Shift+Left Click is reserved for multi-select; Ctrl (or Space / H / right / middle button) pans the camera
+    const shouldPan = !inWalk && (e.button === 2 || e.button === 1 || e.ctrlKey || isSpacePressedRef.current || isPanModeRef.current);
 
     const hitInstanceId = shouldPan ? null : pickAt(e.clientX, e.clientY);
 
@@ -111,6 +120,9 @@ export function useCanvasPointerHandlers({
     }
 
     pointerHitFurnitureRef.current = null;
+
+    // Walking with a free cursor never orbits or pans the camera
+    if (inWalk) return;
 
     if (shouldPan) {
       dragModeRef.current = 'pan';
@@ -123,7 +135,22 @@ export function useCanvasPointerHandlers({
   };
 
   const onPointerMove = (e: ReactPointerEvent) => {
-    if (isWalkModeRef.current) {
+    if (isWalkModeRef.current && !isWalkInteractRef.current) {
+      // Pointer locked: the camera turns with the mouse, no dragging needed
+      if (document.pointerLockElement === mountRef.current) {
+        walkLook(e.movementX, e.movementY);
+        return;
+      }
+      // Pointer lock unavailable: the mouse position steers the view (the cursor stays hidden)
+      if (e.pointerType === 'mouse' && mountRef.current) {
+        const rect = mountRef.current.getBoundingClientRect();
+        lookSteerRef.current = {
+          x: Math.max(-1, Math.min(1, (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2))),
+          y: Math.max(-1, Math.min(1, (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2))),
+        };
+        return;
+      }
+      // Touch / pen: drag to look
       if (pointerStartRef.current) {
         const deltaX = e.clientX - lastPointerPosRef.current.x;
         const deltaY = e.clientY - lastPointerPosRef.current.y;
@@ -209,8 +236,11 @@ export function useCanvasPointerHandlers({
     let gx = clampedX;
     let gz = clampedZ;
     const snapThreshold = isSmallItem(product) ? 0.12 : 0.35;
-    const snapResult = findNearestCenterSnap(gx, gz, fp, placedItems, catalog, movingInstanceIdRef.current, snapThreshold);
-    if (snapResult.isSnapped) {
+    // Wall placement wins over the magnetic desk-centre snap
+    const snapResult = isNearWall(gx, gz, fp.width, fp.depth, roomWidth, roomLength)
+      ? null
+      : findNearestCenterSnap(gx, gz, fp, placedItems, catalog, movingInstanceIdRef.current, snapThreshold);
+    if (snapResult?.isSnapped) {
       gx = snapResult.x;
       gz = snapResult.z;
     }
@@ -233,9 +263,14 @@ export function useCanvasPointerHandlers({
       mountRef.current.style.cursor = isPanModeRef.current || isSpacePressedRef.current ? 'grab' : 'crosshair';
     }
 
-    if (isWalkModeRef.current) {
-      // In walk mode, clicking without dragging allows selecting furniture to inspect/swap/move
-      if (!wasDragging) {
+    if (isWalkModeRef.current && !isWalkInteractRef.current) {
+      // Carrying furniture at the crosshair: a click drops it where the ghost is
+      if (heldProduct) {
+        if (hoverTile) handleDirectPlace(hoverTile);
+        return;
+      }
+      // Look mode without pointer lock: a plain click still selects furniture
+      if (!wasDragging && document.pointerLockElement !== mountRef.current) {
         const targetId = pickAt(e.clientX, e.clientY);
         if (targetId) {
           applySelectionClick(targetId, e.shiftKey);
@@ -293,6 +328,11 @@ export function useCanvasPointerHandlers({
   };
 
   const onWheel = (e: ReactWheelEvent) => {
+    // Walking: the wheel rotates a carried item and never zooms
+    if (isWalkModeRef.current) {
+      if (heldProduct) stepHeldRotation(e.deltaY < 0 ? 'cw' : 'ccw');
+      return;
+    }
     if (e.shiftKey) {
       panBy(-e.deltaY, 0, mountRef.current?.clientHeight || window.innerHeight);
     } else if (e.deltaY < 0) {

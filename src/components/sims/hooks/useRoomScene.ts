@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type MutableRefObject } from 'react';
 import * as THREE from 'three';
-import type { SimsProduct, PlacedFurniture } from '../../../data/simsCatalog';
 import type { SpaceParameters } from '../../../types/space';
 import {
   generateFloorTexture,
@@ -14,7 +13,6 @@ import {
   addSceneLights,
   animatePlumbob,
   applySceneBackground,
-  collectWalkObstacles,
   createHoverIndicator,
   disposeGeometries,
   disposeMeshes,
@@ -37,8 +35,6 @@ interface UseRoomSceneParams {
   /** Latest-value refs read by the 60FPS render loop. */
   isWalkModeRef: MutableRefObject<boolean>;
   walkMoveRef: MutableRefObject<CameraApi['walkMove']>;
-  placedItemsRef: MutableRefObject<PlacedFurniture[]>;
-  catalogRef: MutableRefObject<SimsProduct[]>;
   roomWidthRef: MutableRefObject<number>;
   roomLengthRef: MutableRefObject<number>;
   selectedInstanceIdsRef: MutableRefObject<string[]>;
@@ -58,8 +54,6 @@ export function useRoomScene({
   camera: { cameraRef, updateCameraPosition, fitRoomInView },
   isWalkModeRef,
   walkMoveRef,
-  placedItemsRef,
-  catalogRef,
   roomWidthRef,
   roomLengthRef,
   selectedInstanceIdsRef,
@@ -98,7 +92,7 @@ export function useRoomScene({
     itemMeshesRef.current.clear();
 
     const maxDim = Math.max(roomWidth, roomLength);
-    applySceneBackground(scene, maxDim, isNightMode);
+    applySceneBackground(scene, isNightMode, space.backdropColor);
 
     const camera = new THREE.PerspectiveCamera(36, width / height, 0.2, Math.max(500, maxDim * 12));
     cameraRef.current = camera;
@@ -176,14 +170,12 @@ export function useRoomScene({
         if (k['KeyS'] || k['ArrowDown']) fwd -= 1;
         if (k['KeyD'] || k['ArrowRight']) strafe += 1;
         if (k['KeyA'] || k['ArrowLeft']) strafe -= 1;
-        const isSprinting = Boolean(k['ShiftLeft'] || k['ShiftRight']);
 
         const rw = roomWidthRef.current;
         const rl = roomLengthRef.current;
-        const obstacles = collectWalkObstacles(placedItemsRef.current, catalogRef.current, rw, rl);
-
+        // Furniture is walk-through: only the room walls limit movement (no obstacles passed)
         // Call walkMove every frame to preserve kinematic damping and active tweens
-        walkMoveRef.current(fwd, strafe, dt, rw, rl, obstacles, isSprinting);
+        walkMoveRef.current(fwd, strafe, dt, rw, rl, []);
       }
 
       if (plumbobRef.current && plumbobRef.current.visible) {
@@ -282,11 +274,11 @@ export function useRoomScene({
     scene.add(newWindow);
     windowGroupRef.current = newWindow;
 
-    updateSceneTheme(scene, maxDim, isNightMode);
+    updateSceneTheme(scene, maxDim, isNightMode, space.backdropColor);
 
     // Auto-fit camera framing smoothly to new room dimensions
     fitRoomInView(roomWidth, roomLength);
-  }, [space, isNightMode, roomWidth, roomLength, space.wallColor, space.hasWindow, space.floorStyle, space.wallStyle, fitRoomInView]);
+  }, [space, isNightMode, roomWidth, roomLength, space.wallColor, space.hasWindow, space.floorStyle, space.wallStyle, space.backdropColor, fitRoomInView]);
 
   return { sceneReady, bumpSceneReady };
 }

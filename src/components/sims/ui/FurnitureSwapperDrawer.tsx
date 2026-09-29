@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { SimsProduct, PlacedFurniture, SimsCategory } from '../../../data/simsCatalog';
 import {
   X,
@@ -14,6 +14,8 @@ interface FurnitureSwapperDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onSwapProduct: (instanceId: string, newProduct: SimsProduct) => void;
+  /** Live preview: called with a product while it is hovered / focused, and with null when the pointer leaves. */
+  onPreviewProduct?: (instanceId: string, product: SimsProduct | null) => void;
 }
 
 export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
@@ -22,12 +24,59 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
   isOpen,
   onClose,
   onSwapProduct,
+  onPreviewProduct,
 }) => {
   const currentProduct = selectedItem ? catalog.find((p) => p.id === selectedItem.productId) : null;
   const currentCategory = currentProduct?.category || 'desks';
 
   const [categoryOverride, setCategoryOverride] = useState<SimsCategory | null>(null);
   const activeCategory = categoryOverride || currentCategory;
+
+  // Touch screens have no hover: a tap previews the option, "Apply" confirms it
+  const isTouch = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches, []);
+  const [pendingProduct, setPendingProduct] = useState<SimsProduct | null>(null);
+  useEffect(() => {
+    if (!isOpen) setPendingProduct(null);
+  }, [isOpen]);
+
+  // Keyboard navigation: focus the equipped card as soon as the drawer opens, arrows move between cards
+  const listRef = useRef<HTMLDivElement>(null);
+  const openedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isOpen || !selectedItem) {
+      openedForRef.current = null;
+      return;
+    }
+    if (openedForRef.current === selectedItem.instanceId) return;
+    openedForRef.current = selectedItem.instanceId;
+    const frame = requestAnimationFrame(() => {
+      const cards = listRef.current?.querySelectorAll<HTMLElement>('[data-swap-card]');
+      const equipped = listRef.current?.querySelector<HTMLElement>('[data-swap-card][data-equipped="true"]');
+      (equipped ?? cards?.[0])?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, selectedItem]);
+
+  const handleListKeyDown = (e: React.KeyboardEvent) => {
+    const keys = ['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft'];
+    if (e.key === 'Escape') {
+      // Keep Esc from also leaving walk mode behind the drawer
+      e.stopPropagation();
+      onClose();
+      return;
+    }
+    if (!keys.includes(e.key)) return;
+    // Arrow keys belong to the drawer while it is open (never walk the player)
+    e.preventDefault();
+    e.stopPropagation();
+    const cards = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[data-swap-card]') ?? []);
+    if (cards.length === 0) return;
+    const current = cards.findIndex(c => c === document.activeElement);
+    const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;
+    const next = cards[Math.max(0, Math.min(cards.length - 1, (current === -1 ? 0 : current + step)))];
+    next.focus();
+    next.scrollIntoView({ block: 'nearest' });
+  };
 
   if (!isOpen || !selectedItem) return null;
 
@@ -51,20 +100,26 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
 
   const handleSelectProduct = (newProd: SimsProduct) => {
     if (newProd.id === selectedItem.productId) return;
+    if (isTouch && pendingProduct?.id !== newProd.id) {
+      sounds.playSelect();
+      setPendingProduct(newProd);
+      onPreviewProduct?.(selectedItem.instanceId, newProd);
+      return;
+    }
     sounds.playPlace();
     onSwapProduct(selectedItem.instanceId, newProd);
   };
 
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none flex justify-end">
+    <div className="fixed inset-0 z-50 pointer-events-none flex justify-end items-end sm:items-stretch">
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-black/50 backdrop-blur-xs pointer-events-auto transition-opacity"
+        className="absolute inset-0 pointer-events-auto"
       />
 
       {/* Slide-in Drawer */}
-      <div className="relative pointer-events-auto w-full max-w-md sm:max-w-lg h-full bg-[#0c1017]/95 backdrop-blur-2xl border-l border-white/10 shadow-2xl flex flex-col z-10 animate-slide-left text-white select-none">
+      <div className="relative pointer-events-auto w-full sm:max-w-lg h-[48vh] sm:h-full bg-[#0c1017]/95 backdrop-blur-2xl border-t sm:border-t-0 sm:border-l border-white/10 rounded-t-3xl sm:rounded-none shadow-2xl flex flex-col z-10 animate-slide-left text-white select-none">
         {/* Drawer Header */}
         <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between flex-shrink-0 bg-black/30">
           <div className="flex items-center gap-3">
@@ -121,7 +176,7 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
         </div>
 
         {/* Product Cards List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
+        <div ref={listRef} onKeyDown={handleListKeyDown} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
           {availableProducts.length === 0 ? (
             <div className="text-center py-12 text-zinc-500 text-sm">
               No products found in this category.
@@ -134,15 +189,25 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
               return (
                 <div
                   key={prod.id}
+                  tabIndex={0}
+                  data-swap-card
+                  data-equipped={isEquipped}
                   onClick={() => handleSelectProduct(prod)}
-                  className={`p-3.5 rounded-2xl border transition flex gap-3.5 items-center cursor-pointer ${
+                  onMouseEnter={() => onPreviewProduct?.(selectedItem.instanceId, isEquipped ? null : prod)}
+                  onFocus={() => onPreviewProduct?.(selectedItem.instanceId, isEquipped ? null : prod)}
+                  onMouseLeave={() => onPreviewProduct?.(selectedItem.instanceId, null)}
+                  onBlur={() => onPreviewProduct?.(selectedItem.instanceId, null)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSelectProduct(prod);
+                  }}
+                  className={`p-3.5 rounded-2xl border transition flex gap-3.5 items-center cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                     isEquipped
                       ? 'bg-emerald-500/10 border-emerald-500/60 shadow-glow ring-1 ring-emerald-500/30'
                       : 'bg-white/5 border-white/10 hover:border-white/25 hover:bg-white/10'
                   }`}
                 >
                   {/* Thumbnail / 3D Icon */}
-                  <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex-shrink-0 flex items-center justify-center">
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex-shrink-0 flex items-center justify-center">
                     {prod.imageUrl ? (
                       <img
                         src={prod.imageUrl}
@@ -235,6 +300,17 @@ export const FurnitureSwapperDrawer: React.FC<FurnitureSwapperDrawerProps> = ({
         {/* Bottom Status / Summary */}
         <div className="p-4 border-t border-white/10 bg-black/40 flex items-center justify-between text-xs text-zinc-400">
           <span>{availableProducts.length} options available</span>
+          {pendingProduct && (
+            <button
+              onClick={() => {
+                sounds.playPlace();
+                onSwapProduct(selectedItem.instanceId, pendingProduct);
+              }}
+              className="apple-press px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold transition cursor-pointer truncate max-w-[45%]"
+            >
+              Apply {pendingProduct.name}
+            </button>
+          )}
           <button
             onClick={onClose}
             className="apple-press px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold transition cursor-pointer"

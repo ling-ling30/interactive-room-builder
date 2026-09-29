@@ -5,6 +5,9 @@ import { AppleShowcase } from './components/showcase/AppleShowcase';
 import { FullscreenSimsWorld } from './components/sims/FullscreenSimsWorld';
 import { SimsAdminManager } from './components/sims/SimsAdminManager';
 import { WorkstationStationModal } from './components/workstation/WorkstationStationModal';
+import { DEFAULT_SPACE } from './types/space';
+import { buildSetupItems, createSetupFromRoom, type RoomSetup } from './data/roomSetups';
+import { useRoomSetups } from './utils/setupStorage';
 import type { WorkstationConfig } from './types/workstation';
 
 const STORAGE_CATALOG_KEY = 'monis_sims_catalog_v9_scraped';
@@ -156,6 +159,33 @@ export default function App() {
     setPlacedItems(prev => prev.filter(p => !idSet.has(p.instanceId) && (!p.mountedOnDeskId || !idSet.has(p.mountedOnDeskId))));
   };
 
+  const roomSetups = useRoomSetups();
+
+  // CMS: snapshot the studio room (with the room shell saved by the studio) as a new setup
+  const handleSaveCurrentRoomAsSetup = (name: string) => {
+    let space = DEFAULT_SPACE;
+    try {
+      space = { ...DEFAULT_SPACE, ...JSON.parse(localStorage.getItem('monis_sims_space_v3') || 'null') };
+    } catch (e) {
+      console.error(e);
+    }
+    const { width, length, floorStyle, wallColor, wallStyle, backdropColor } = space;
+    roomSetups.addSetup(createSetupFromRoom({ name }, { width, length, floorStyle, wallColor, wallStyle, backdropColor }, placedItems, catalog));
+  };
+
+  // Landing page bundle: lay the setup out in a 3 x 3 m room and open the 3D studio
+  const handleSelectSetup = (setup: RoomSetup) => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('monis_sims_space_v3') || 'null');
+      localStorage.setItem('monis_sims_space_v3', JSON.stringify({ ...DEFAULT_SPACE, ...saved, ...setup.room }));
+    } catch (e) {
+      console.error(e);
+    }
+    setPlacedItems(buildSetupItems(setup, catalog));
+    setStartInWalkMode(false);
+    setUiMode('fullscreen_sims');
+  };
+
   const handleClearRoom = () => {
     setPlacedItems([]);
   };
@@ -235,6 +265,8 @@ export default function App() {
             setUiMode('fullscreen_sims');
           }}
           onOpenAdmin={() => setUiMode('admin')}
+          onSelectSetup={handleSelectSetup}
+          setups={roomSetups.setups}
           catalog={catalog}
         />
       )}
@@ -249,6 +281,9 @@ export default function App() {
           onDeleteItem={handleDeleteItem}
           onDeleteItems={handleDeleteItems}
           onClearRoom={handleClearRoom}
+          setups={roomSetups.setups}
+          onSaveSetup={roomSetups.addSetup}
+          onReplaceRoom={setPlacedItems}
           onExitFullscreen={() => setUiMode('showcase')}
           onOpenAdmin={() => setUiMode('admin')}
           initialWalkMode={startInWalkMode}
@@ -268,6 +303,9 @@ export default function App() {
             onImportCatalog={handleImportCatalog}
             onBackToSims={() => setUiMode('fullscreen_sims')}
             onBackToShowcase={() => setUiMode('showcase')}
+            roomSetups={roomSetups}
+            currentRoomItemCount={placedItems.length}
+            onSaveCurrentRoomAsSetup={handleSaveCurrentRoomAsSetup}
           />
         </div>
       )}

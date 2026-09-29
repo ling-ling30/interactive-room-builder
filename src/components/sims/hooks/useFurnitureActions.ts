@@ -1,4 +1,4 @@
-import { useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import * as THREE from 'three';
 import type { SimsProduct, PlacedFurniture } from '../../../data/simsCatalog';
 import { sounds } from '../../../utils/soundEffects';
@@ -284,7 +284,8 @@ export function useFurnitureActions({
         onUpdateItem(it.instanceId, {
           gridX: itGx,
           gridZ: itGz,
-          rotation: it.rotation,
+          // A single moved item takes the held rotation (also changed by the Numpad shortcuts)
+          rotation: group.items.length === 1 ? heldRotation : it.rotation,
           surfaceY: finalSurfaceY,
           mountedOnDeskId: finalMountedDeskId,
         });
@@ -406,25 +407,32 @@ export function useFurnitureActions({
   }, [selectedInstanceIds, onDeleteItems, onDeleteItem]);
 
   // Rotate the held item (and every member of a moving group) one step; plays the rotate sound
+  // Latest held rotation, so rapid presses and re-renders never step from a stale value.
+  // The group / ghost mutation must live outside the state updater: updaters can run twice
+  // (StrictMode), which stepped moving-group items two times and left the dropped item rotated wrongly.
+  const heldRotationRef = useRef(heldRotation);
+  heldRotationRef.current = heldRotation;
+
   const stepHeldRotation = useCallback((dir: 'cw' | 'ccw') => {
     sounds.playRotate();
-    setHeldRotation(prev => {
-      const nextRot = stepFurnitureRotation(prev, dir);
-      if (movingGroupRef.current) {
-        movingGroupRef.current.items.forEach(it => {
-          it.rotation = stepFurnitureRotation(it.rotation, dir);
+    const nextRot = stepFurnitureRotation(heldRotationRef.current, dir);
+    heldRotationRef.current = nextRot;
+    setHeldRotation(nextRot);
+
+    const group = movingGroupRef.current;
+    if (group) {
+      group.items.forEach(it => {
+        it.rotation = stepFurnitureRotation(it.rotation, dir);
+      });
+      if (ghostMeshRef.current) {
+        ghostMeshRef.current.children.forEach((child, idx) => {
+          const it = group.items[idx];
+          if (it) {
+            child.rotation.y = (it.rotation * Math.PI) / 180;
+          }
         });
-        if (ghostMeshRef.current) {
-          ghostMeshRef.current.children.forEach((child, idx) => {
-            const it = movingGroupRef.current?.items[idx];
-            if (it) {
-              child.rotation.y = (it.rotation * Math.PI) / 180;
-            }
-          });
-        }
       }
-      return nextRot;
-    });
+    }
   }, []);
 
   return {

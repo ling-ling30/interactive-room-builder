@@ -6,11 +6,14 @@ import {
   previewProductFromForm,
   type ProductFormValues,
 } from './productForm';
+import { validateProductForm, type FormErrors } from './productSchema';
 
 export interface ProductFormApi {
   values: ProductFormValues;
   set: <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) => void;
   patch: (partial: Partial<ProductFormValues>) => void;
+  /** Validation messages from the last submit attempt; a field's message clears as soon as it is edited. */
+  errors: FormErrors;
 }
 
 /** State for the add / edit product modal (open flag, editing target, all form fields, live preview product). */
@@ -19,18 +22,33 @@ export function useProductForm(availableCategories: string[]) {
   const [editingItem, setEditingItem] = useState<SimsProduct | null>(null);
   const [values, setValues] = useState<ProductFormValues>(EMPTY_PRODUCT_FORM);
   const [isCustomCategory, setIsCustomCategory] = useState<boolean>(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const clearErrors = useCallback((keys: string[]) => {
+    setErrors(prev => (keys.some(k => prev[k as keyof FormErrors]) ? { ...prev, ...Object.fromEntries(keys.map(k => [k, undefined])) } : prev));
+  }, []);
 
   const set = useCallback(<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) => {
     setValues(prev => ({ ...prev, [key]: value }));
-  }, []);
+    clearErrors([key]);
+  }, [clearErrors]);
 
   const patch = useCallback((partial: Partial<ProductFormValues>) => {
     setValues(prev => ({ ...prev, ...partial }));
-  }, []);
+    clearErrors(Object.keys(partial));
+  }, [clearErrors]);
+
+  /** Runs the schema, stores the messages and returns the result (validated data on success). */
+  const validate = useCallback(() => {
+    const result = validateProductForm(values);
+    setErrors(result.success ? {} : result.errors);
+    return result;
+  }, [values]);
 
   const openAdd = useCallback(() => {
     setEditingItem(null);
     setValues(EMPTY_PRODUCT_FORM);
+    setErrors({});
     setIsCustomCategory(false);
     setIsOpen(true);
   }, []);
@@ -38,6 +56,7 @@ export function useProductForm(availableCategories: string[]) {
   const openEdit = useCallback((item: SimsProduct) => {
     setEditingItem(item);
     setValues(formFromProduct(item));
+    setErrors({});
     setIsCustomCategory(!availableCategories.some(c => c.toLowerCase() === item.category?.toLowerCase()));
     setIsOpen(true);
   }, [availableCategories]);
@@ -52,6 +71,8 @@ export function useProductForm(availableCategories: string[]) {
     values,
     set,
     patch,
+    errors,
+    validate,
     isCustomCategory,
     setIsCustomCategory,
     previewProduct,

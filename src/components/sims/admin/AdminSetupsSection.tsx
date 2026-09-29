@@ -100,6 +100,7 @@ export const AdminSetupsSection: React.FC<AdminSetupsSectionProps> = ({
                     <label className="flex items-center gap-1 text-[11px] text-slate-500 font-mono">
                       <input
                         type="number"
+                        onWheel={(e) => e.currentTarget.blur()}
                         min={0}
                         max={90}
                         className={INPUT_CLASS}

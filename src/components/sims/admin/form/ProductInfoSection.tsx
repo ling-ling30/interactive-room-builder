@@ -1,3 +1,5 @@
+import { FieldError } from './FieldError';
+import { fieldBorder } from './fieldStyles';
 import React from 'react';
 import type { SimsProduct } from '../../../../data/simsCatalog';
 import { AppleSelect } from '../../ui/AppleSelect';
@@ -35,12 +37,13 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({
           </label>
           <input
             type="text"
-            required
             value={name}
             onChange={(e) => set('name', e.target.value)}
+            aria-invalid={Boolean(form.errors.name)}
             placeholder="e.g. Ergonomic Standing Desk Pro"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-slate-900"
+            className={`w-full bg-slate-50 border ${fieldBorder(form.errors.name)} rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-slate-900`}
           />
+          <FieldError message={form.errors.name} />
         </div>
 
         <div>

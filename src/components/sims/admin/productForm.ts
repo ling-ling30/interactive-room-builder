@@ -1,19 +1,22 @@
 import type { SimsProduct, SimsCategory } from '../../../data/simsCatalog';
 import type { ModelType } from '../../../data/modelTypes';
 import { newId } from '../../../utils/ids';
+import type { NumberValue } from '../../ui/NumberInput';
+import type { ProductFormData } from './productSchema';
 
 export interface ProductFormValues {
   name: string;
   brand: string;
   category: string;
-  widthTiles: number;
-  depthTiles: number;
-  actualWidthM: number;
-  actualDepthM: number;
-  actualHeightM: number;
-  weeklyRent: number;
-  monthlyRent: number;
-  deposit: number;
+  // Numeric inputs can be blank while typing (never silently 0); the schema decides what is valid
+  widthTiles: NumberValue;
+  depthTiles: NumberValue;
+  actualWidthM: NumberValue;
+  actualDepthM: NumberValue;
+  actualHeightM: NumberValue;
+  weeklyRent: NumberValue;
+  monthlyRent: NumberValue;
+  deposit: NumberValue;
   layer: 'floor' | 'surface';
   color: string;
   modelType: ModelType;
@@ -113,38 +116,31 @@ export function previewProductFromForm(v: ProductFormValues, editingItem: SimsPr
   };
 }
 
-/** Normalized product ready to be saved to the catalog. */
-export function productFromForm(v: ProductFormValues, editingItem: SimsProduct | null): SimsProduct {
-  const cleanCategory = (v.category.trim() || 'decor').toLowerCase() as SimsCategory;
+/** Normalized product ready to be saved to the catalog (input is the schema-validated form data). */
+export function productFromForm(v: ProductFormData, editingItem: SimsProduct | null): SimsProduct {
+  const category = v.category.toLowerCase() as SimsCategory;
 
   return {
-    id: editingItem ? editingItem.id : newId(`monis-${cleanCategory}`),
-    name: v.name.trim(),
-    brand: v.brand.trim() || 'Monis',
-    category: cleanCategory,
-    footprint: {
-      width: Math.max(0.5, Number(v.widthTiles)),
-      depth: Math.max(0.5, Number(v.depthTiles)),
-    },
-    actualDimensions: {
-      widthM: Number(v.actualWidthM) || Number(v.widthTiles),
-      depthM: Number(v.actualDepthM) || Number(v.depthTiles),
-      heightM: Number(v.actualHeightM) || 0.74,
-    },
-    weeklyRent: Math.max(0, Number(v.weeklyRent)),
-    monthlyRent: Math.max(0, Number(v.monthlyRent)),
-    deposit: Math.max(0, Number(v.deposit)),
+    id: editingItem ? editingItem.id : newId(`monis-${category}`),
+    name: v.name,
+    brand: v.brand || 'Monis',
+    category,
+    footprint: { width: v.widthTiles, depth: v.depthTiles },
+    actualDimensions: { widthM: v.actualWidthM, depthM: v.actualDepthM, heightM: v.actualHeightM },
+    weeklyRent: v.weeklyRent,
+    monthlyRent: v.monthlyRent,
+    deposit: v.deposit,
     layer: v.layer,
     color: v.color,
     colorOptions: editingItem?.colorOptions || [v.color, '#1e293b', '#cbd5e1', '#f1f5f9'],
     modelType: v.modelType,
     icon: v.icon || '🪵',
-    description: v.description.trim(),
-    material: v.material.trim(),
-    imageUrl: v.imageUrl.trim() || undefined,
-    modelUrl: v.modelUrl.trim() || undefined,
-    heightCm: Math.round(Number(v.actualHeightM) * 100),
-    dimensionsText: `${Math.round(Number(v.actualWidthM) * 100)}×${Math.round(Number(v.actualDepthM) * 100)} cm`,
+    description: v.description,
+    material: v.material,
+    imageUrl: v.imageUrl || undefined,
+    modelUrl: v.modelUrl || undefined,
+    heightCm: Math.round(v.actualHeightM * 100),
+    dimensionsText: `${Math.round(v.actualWidthM * 100)}×${Math.round(v.actualDepthM * 100)} cm`,
     scaleMultiplier: v.scaleMultiplier,
     fitMode: v.fitMode,
     variants: editingItem?.variants,

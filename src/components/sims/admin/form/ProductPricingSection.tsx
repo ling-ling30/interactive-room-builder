@@ -1,9 +1,15 @@
 import React from 'react';
+import { NumberInput } from '../../../ui/NumberInput';
 import type { ProductFormApi } from '../useProductForm';
+import { FieldError } from './FieldError';
+import { fieldBorder } from './fieldStyles';
+
+const inputClass = (error: string | undefined, tone: string) =>
+  `w-full bg-slate-50 border ${fieldBorder(error)} rounded-xl px-3 py-2 text-xs font-mono font-bold ${tone} focus:bg-white focus:outline-none`;
 
 /** 4. Rental rates and deposit (USD). */
 export const ProductPricingSection: React.FC<{ form: ProductFormApi }> = ({ form }) => {
-  const { values, set } = form;
+  const { values, set, errors } = form;
   const { monthlyRent, weeklyRent, deposit } = values;
 
   return (
@@ -14,44 +20,46 @@ export const ProductPricingSection: React.FC<{ form: ProductFormApi }> = ({ form
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="text-[11px] font-bold text-slate-700 block mb-1">
+          <label htmlFor="pf-monthly" className="text-[11px] font-bold text-slate-700 block mb-1">
             Monthly Rate ($/mo) *
           </label>
-          <input
-            type="number"
-            required
-            min="0"
+          <NumberInput
+            id="pf-monthly"
             value={monthlyRent}
-            onChange={(e) => set('monthlyRent', parseFloat(e.target.value))}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-700 focus:bg-white focus:outline-none"
+            onChange={(v) => set('monthlyRent', v)}
+            aria-invalid={Boolean(errors.monthlyRent)}
+            className={inputClass(errors.monthlyRent, 'text-emerald-700')}
           />
+          <FieldError message={errors.monthlyRent} />
         </div>
 
         <div>
-          <label className="text-[11px] font-bold text-slate-700 block mb-1">
+          <label htmlFor="pf-weekly" className="text-[11px] font-bold text-slate-700 block mb-1">
             Weekly Rate ($/wk) *
           </label>
-          <input
-            type="number"
-            required
-            min="0"
+          <NumberInput
+            id="pf-weekly"
             value={weeklyRent}
-            onChange={(e) => set('weeklyRent', parseFloat(e.target.value))}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-700 focus:bg-white focus:outline-none"
+            onChange={(v) => set('weeklyRent', v)}
+            aria-invalid={Boolean(errors.weeklyRent)}
+            className={inputClass(errors.weeklyRent, 'text-emerald-700')}
           />
+          <FieldError message={errors.weeklyRent} />
         </div>
 
         <div>
-          <label className="text-[11px] font-bold text-slate-700 block mb-1">
+          <label htmlFor="pf-deposit" className="text-[11px] font-bold text-slate-700 block mb-1">
             Refundable Deposit ($)
           </label>
-          <input
-            type="number"
-            min="0"
+          <NumberInput
+            id="pf-deposit"
             value={deposit}
-            onChange={(e) => set('deposit', parseFloat(e.target.value))}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:bg-white focus:outline-none"
+            onChange={(v) => set('deposit', v)}
+            placeholder="0"
+            aria-invalid={Boolean(errors.deposit)}
+            className={inputClass(errors.deposit, 'text-slate-900')}
           />
+          <FieldError message={errors.deposit} />
         </div>
       </div>
     </div>

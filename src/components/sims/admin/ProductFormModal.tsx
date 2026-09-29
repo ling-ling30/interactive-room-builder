@@ -63,7 +63,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-5 pt-4">
+        <form noValidate data-product-form onSubmit={onSubmit} className="space-y-5 pt-4">
           <ProductInfoSection
             form={formState}
             catalog={catalog}

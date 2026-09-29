@@ -1,17 +1,13 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
+import { useToast, type ToastType } from '../../../hooks/useToast';
 
-export type StatusType = 'success' | 'error';
+export type StatusType = ToastType;
 
-/** Transient status banner (auto clears after 3.5s). */
+/** Admin feedback goes through the global toast (visible above the product modal too). */
 export function useAdminStatus() {
-  const [statusMsg, setStatusMsg] = useState<{ text: string; type: StatusType } | null>(null);
-
-  const showStatus = useCallback((text: string, type: StatusType = 'success') => {
-    setStatusMsg({ text, type });
-    setTimeout(() => setStatusMsg(null), 3500);
-  }, []);
-
-  return { statusMsg, showStatus };
+  const { toast } = useToast();
+  const showStatus = useCallback((text: string, type: StatusType = 'success') => toast(text, type), [toast]);
+  return { showStatus };
 }
 
 export type ShowStatus = ReturnType<typeof useAdminStatus>['showStatus'];

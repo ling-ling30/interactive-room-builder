@@ -58,44 +58,11 @@ export default function App() {
       const saved = localStorage.getItem(STORAGE_ROOM_KEY) || localStorage.getItem('monis_sims_room_v8_scraped');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed.some((item: PlacedFurniture) => item.productId?.startsWith('monis-'))) {
-          let valid = parsed.filter(item => item && typeof item.productId === 'string' && typeof item.instanceId === 'string');
-          
-          // Ensure existing saved room has keyboard & mouse placed on desk if missing
-          const hasKeyboard = valid.some(i => i.productId?.includes('keyboard'));
-          const hasMouse = valid.some(i => i.productId?.includes('mouse'));
-          if (!hasKeyboard || !hasMouse) {
-            const desk = valid.find(i => i.instanceId === 'inst-desk-1' || i.productId?.includes('desk'));
-            if (desk) {
-              const additions: PlacedFurniture[] = [];
-              if (!hasKeyboard) {
-                additions.push({
-                  instanceId: 'inst-keyboard-1',
-                  productId: 'monis-mech-keyboard',
-                  gridX: (desk.gridX || 1.5) + 0.125,
-                  gridZ: (desk.gridZ || 1.5) + 0.25,
-                  rotation: desk.rotation || 0,
-                  color: '#334155',
-                  surfaceY: 0.744,
-                  mountedOnDeskId: desk.instanceId,
-                });
-              }
-              if (!hasMouse) {
-                additions.push({
-                  instanceId: 'inst-mouse-1',
-                  productId: 'monis-precision-mouse',
-                  gridX: (desk.gridX || 1.5) + 0.625,
-                  gridZ: (desk.gridZ || 1.5) + 0.25,
-                  rotation: desk.rotation || 0,
-                  color: '#1e293b',
-                  surfaceY: 0.744,
-                  mountedOnDeskId: desk.instanceId,
-                });
-              }
-              valid = [...valid, ...additions];
-            }
-          }
-          if (valid.length > 0) return valid;
+        // An empty saved room is a valid choice (the user cleared it): only fall back when nothing usable is stored
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (item: PlacedFurniture) => item && typeof item.productId === 'string' && typeof item.instanceId === 'string'
+          );
         }
       }
     } catch (e) {

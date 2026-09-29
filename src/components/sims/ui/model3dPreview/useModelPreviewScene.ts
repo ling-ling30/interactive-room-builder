@@ -101,7 +101,7 @@ export function useModelPreviewScene({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, canvasHeight);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     rendererRef.current = renderer;
 
     container.appendChild(renderer.domElement);

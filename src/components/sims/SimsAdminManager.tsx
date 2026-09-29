@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
 import type { SimsProduct } from '../../data/simsCatalog';
 import { sounds } from '../../utils/soundEffects';
 import { newId } from '../../utils/ids';
@@ -50,7 +49,7 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
   onSaveCurrentRoomAsSetup,
 }) => {
   const [inspectingProduct, setInspectingProduct] = useState<SimsProduct | null>(null);
-  const { statusMsg, showStatus } = useAdminStatus();
+  const { showStatus } = useAdminStatus();
 
   // Derived existing categories from current catalog
   const availableCategories = useMemo(() => {
@@ -66,7 +65,7 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
 
   const table = useCatalogTable(catalog);
   const productForm = useProductForm(availableCategories);
-  const { editingItem, values, openAdd, openEdit, close } = productForm;
+  const { editingItem, openAdd, openEdit, close } = productForm;
 
   const handleDuplicate = (item: SimsProduct) => {
     onAddProduct({
@@ -97,12 +96,15 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.name.trim()) {
-      showStatus('Product name is required', 'error');
+    const result = productForm.validate();
+    if (!result.success) {
+      showStatus('Please fix the highlighted fields', 'error');
+      // Let the error state render, then jump to the first invalid field
+      setTimeout(() => document.querySelector<HTMLElement>('[data-product-form] [aria-invalid="true"]')?.focus(), 0);
       return;
     }
 
-    const productPayload = productFromForm(values, editingItem);
+    const productPayload = productFromForm(result.data, editingItem);
 
     if (editingItem) {
       onUpdateProduct(editingItem.id, productPayload);
@@ -148,17 +150,6 @@ export const SimsAdminManager: React.FC<SimsAdminManagerProps> = ({
         totalMonthlyFleet={totalMonthlyFleet}
         itemsWithPhotos={catalog.filter(p => Boolean(p.imageUrl)).length}
       />
-
-      {statusMsg && (
-        <div className={`mb-4 p-3.5 rounded-2xl text-xs flex items-center gap-2 border animate-fade-in ${
-          statusMsg.type === 'success'
-            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-            : 'bg-rose-50 border-rose-200 text-rose-800'
-        }`}>
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span className="font-semibold">{statusMsg.text}</span>
-        </div>
-      )}
 
       <AdminFilterBar
         catalog={catalog}

@@ -192,9 +192,9 @@ export const ProductMediaSection: React.FC<ProductMediaSectionProps> = ({
         >
           <AppleDimensionAdjuster
             dimensions={{
-              widthM: actualWidthM,
-              depthM: actualDepthM,
-              heightM: actualHeightM,
+              widthM: Number(actualWidthM) || 1,
+              depthM: Number(actualDepthM) || 1,
+              heightM: Number(actualHeightM) || 1,
               scaleMultiplier,
               fitMode,
             }}

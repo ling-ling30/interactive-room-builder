@@ -49,7 +49,6 @@ export const WorkstationStationModal: React.FC<WorkstationStationModalProps> = (
   const [selectedSlot, setSelectedSlot] = useState<DeskStudioSlot | null>(null);
   const [activePresetName, setActivePresetName] = useState<string>('Creative 4K Video Editor');
   const [showPresetsMenu, setShowPresetsMenu] = useState<boolean>(false);
-  const [showSavedFeedback, setShowSavedFeedback] = useState(false);
   const [showCopiedFeedback, setShowCopiedFeedback] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isConfirmApplyOpen, setIsConfirmApplyOpen] = useState(false);
@@ -283,20 +282,10 @@ export const WorkstationStationModal: React.FC<WorkstationStationModalProps> = (
 
           <button
             onClick={handleApplyClick}
-            disabled={showSavedFeedback}
             className="apple-press flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-xs shadow-md transition cursor-pointer"
           >
-            {showSavedFeedback ? (
-              <>
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>Station Configured!</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 text-slate-950" />
-                <span>Apply to 3D Villa Room</span>
-              </>
-            )}
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            <span>Apply to 3D Villa Room</span>
           </button>
         </div>
       </header>

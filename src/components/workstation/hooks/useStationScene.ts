@@ -37,7 +37,7 @@ export function useStationScene(
     targetHeightMRef.current = deskHeightCm / 100;
   }, [deskHeightCm]);
 
-  const { targetCenterRef, updateCamera } = orbit;
+  const { updateCamera } = orbit;
 
   useEffect(() => {
     if (!mountRef.current) return;

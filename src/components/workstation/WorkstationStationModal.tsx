@@ -82,19 +82,15 @@ export const WorkstationStationModal: React.FC<WorkstationStationModalProps> = (
     setIsConfirmApplyOpen(false);
     sounds.playPlace();
     confetti({
-      particleCount: 60,
+      particleCount: 65,
       spread: 75,
       origin: { y: 0.75 },
     });
-    setShowSavedFeedback(true);
     const placedItems = buildWorkstationPlacedItems(config, effectiveCatalog);
-    setTimeout(() => {
-      setShowSavedFeedback(false);
-      if (onApplyToRoom) {
-        onApplyToRoom(config, placedItems, mode);
-      }
-      onClose();
-    }, 850);
+    if (onApplyToRoom) {
+      onApplyToRoom(config, placedItems, mode);
+    }
+    onClose();
   };
 
   const handleCopySpec = () => {

@@ -12,7 +12,7 @@ import { FurnitureStoreSidebar } from './ui/FurnitureStoreSidebar';
 import { FurnitureSwapperDrawer } from './ui/FurnitureSwapperDrawer';
 import {
   ArrowLeft, Keyboard, ShoppingBag,
-  Maximize2, Package, Armchair, Footprints, RotateCcw, Trash2
+  Maximize2, Package, Armchair, Footprints, RotateCcw, Trash2, Sparkles
 } from 'lucide-react';
 import { sounds } from '../../utils/soundEffects';
 import { STORAGE_SPACE_KEY } from '../../utils/storageKeys';
@@ -33,6 +33,7 @@ interface FullscreenSimsWorldProps {
   onReplaceRoom: (items: PlacedFurniture[]) => void;
   onExitFullscreen: () => void;
   onOpenAdmin: () => void;
+  onOpenDeskStudio?: () => void;
   initialWalkMode?: boolean;
 }
 
@@ -49,6 +50,7 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
   onReplaceRoom,
   onExitFullscreen,
   onOpenAdmin,
+  onOpenDeskStudio,
   initialWalkMode = false,
 }) => {
 
@@ -262,6 +264,21 @@ export const FullscreenSimsWorld: React.FC<FullscreenSimsWorldProps> = ({
             <Package className="w-3.5 h-3.5 text-emerald-600" />
             <span>Setups</span>
           </button>
+
+          {/* Dedicated Close-Up Desk Studio Configurator */}
+          {onOpenDeskStudio && (
+            <button
+              onClick={() => {
+                sounds.playSelect();
+                onOpenDeskStudio();
+              }}
+              className="apple-press bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold border border-emerald-400 shadow-md flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs transition cursor-pointer"
+              title="Open 3D Desk Studio Configurator"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+              <span className="hidden sm:inline">Desk Studio</span>
+            </button>
+          )}
 
           {/* Walk in Studio / Return to Orbit Trigger Button */}
           <button

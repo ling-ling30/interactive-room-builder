@@ -24,18 +24,18 @@ export const GearTab: React.FC<ControlsTabProps> = ({ config, onChange }) => (
         <div className="flex gap-1.5">
           {LIGHT_TEMPERATURES.map((t) => (
             <button
-              key={t}
+              key={t.id}
               onClick={() => {
                 sounds.playSelect();
-                onChange({ lightTemperature: t });
+                onChange({ lightTemperature: t.id });
               }}
               className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase transition cursor-pointer ${
-                config.lightTemperature === t
+                config.lightTemperature === t.id
                   ? 'bg-amber-400 text-slate-950'
                   : 'bg-white/5 text-zinc-400 hover:bg-white/10'
               }`}
             >
-              {t.replace('_', ' ')}
+              {t.label}
             </button>
           ))}
         </div>

@@ -73,11 +73,12 @@ export default function App() {
 
   const STORAGE_UIMODE_KEY = 'monis_sims_uimode_v1';
 
-  // Main UI Mode: 'showcase' (Apple landing with 1 button), 'fullscreen_sims' (100vw x 100vh 3D world), or 'admin'
-  const [uiMode, setUiMode] = useState<'showcase' | 'fullscreen_sims' | 'admin'>(() => {
+  // Main UI Mode: 'showcase' (Apple landing), 'fullscreen_sims' (100vw x 100vh 3D room), 'admin' (CMS), or 'desk_studio' (3D Desk Studio)
+  const [uiMode, setUiMode] = useState<'showcase' | 'fullscreen_sims' | 'admin' | 'desk_studio'>(() => {
     try {
+      if (typeof window !== 'undefined' && window.location.hash === '#desk-studio') return 'desk_studio';
       const saved = localStorage.getItem(STORAGE_UIMODE_KEY);
-      if (saved === 'fullscreen_sims' || saved === 'admin') return saved;
+      if (saved === 'fullscreen_sims' || saved === 'admin' || saved === 'desk_studio') return saved as 'fullscreen_sims' | 'admin' | 'desk_studio';
     } catch (e) {
       console.error(e);
     }
@@ -237,6 +238,7 @@ export default function App() {
             setStartInWalkMode(true);
             setUiMode('fullscreen_sims');
           }}
+          onOpenDeskStudio={() => setUiMode('desk_studio')}
           onOpenAdmin={() => setUiMode('admin')}
           onSelectSetup={handleSelectSetup}
           setups={roomSetups.setups}
@@ -259,6 +261,7 @@ export default function App() {
           onReplaceRoom={setPlacedItems}
           onExitFullscreen={() => setUiMode('showcase')}
           onOpenAdmin={() => setUiMode('admin')}
+          onOpenDeskStudio={() => setUiMode('desk_studio')}
           initialWalkMode={startInWalkMode}
         />
       )}
@@ -283,24 +286,49 @@ export default function App() {
         </div>
       )}
 
-      {/* 4. Global Virtual Desktop Editing Station Modal */}
-      {isGlobalStationOpen && (
+      {/* 4. Fullscreen 3D Desk Studio Configurator */}
+      {(uiMode === 'desk_studio' || isGlobalStationOpen) && (
         <WorkstationStationModal
-          onClose={() => setIsGlobalStationOpen(false)}
-          onApplyToRoom={(config: WorkstationConfig) => {
-            const targetDesk = placedItems.find(i => {
-              const prod = catalog.find(p => p.id === i.productId);
-              return prod?.category === 'desks';
-            });
-            const targetHeightM = config.deskHeightCm / 100;
+          catalog={catalog}
+          existingPlacedItems={placedItems}
+          onClose={() => {
+            if (isGlobalStationOpen) setIsGlobalStationOpen(false);
+            else setUiMode('showcase');
+          }}
+          onApplyToRoom={(_config: WorkstationConfig, newPlacedItems: PlacedFurniture[], mode: 'merge' | 'replace' = 'merge') => {
+            if (newPlacedItems && newPlacedItems.length > 0) {
+              // Safety snapshot so user can never lose work
+              try {
+                localStorage.setItem('monis_sims_room_backup', JSON.stringify(placedItems));
+              } catch (e) {
+                console.warn('Room backup failed:', e);
+              }
 
-            if (targetDesk) {
-              handleUpdateItem(targetDesk.instanceId, { surfaceY: targetHeightM });
-              const mounted = placedItems.filter(i => i.mountedOnDeskId === targetDesk.instanceId);
-              mounted.forEach(i => handleUpdateItem(i.instanceId, { surfaceY: targetHeightM }));
+              if (mode === 'replace' || placedItems.length === 0) {
+                setPlacedItems(newPlacedItems);
+              } else {
+                const deskIds = new Set(
+                  placedItems
+                    .filter(item => {
+                      const prod = catalog.find(p => p.id === item.productId);
+                      return prod?.category === 'desks';
+                    })
+                    .map(item => item.instanceId)
+                );
+
+                const ambientItems = placedItems.filter(item => {
+                  if (item.mountedOnDeskId && deskIds.has(item.mountedOnDeskId)) return false;
+                  const prod = catalog.find(p => p.id === item.productId);
+                  if (prod?.category === 'desks' || prod?.category === 'chairs') return false;
+                  if (item.surfaceY > 0) return false;
+                  return true;
+                });
+
+                setPlacedItems(ambientItems.length > 0 ? [...ambientItems, ...newPlacedItems] : newPlacedItems);
+              }
             }
-            setUiMode('fullscreen_sims');
             setIsGlobalStationOpen(false);
+            setUiMode('fullscreen_sims');
           }}
         />
       )}

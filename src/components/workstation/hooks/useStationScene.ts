@@ -24,6 +24,7 @@ export function useStationScene(
   const legsGroupRef = useRef<THREE.Group | null>(null);
   const monitorsGroupRef = useRef<THREE.Group | null>(null);
   const accessoriesGroupRef = useRef<THREE.Group | null>(null);
+  const chairGroupRef = useRef<THREE.Group | null>(null);
   const ergonomicsGroupRef = useRef<THREE.Group | null>(null);
   const tabletopMeshRef = useRef<THREE.Mesh | null>(null);
   const deskLightRef = useRef<THREE.SpotLight | null>(null);
@@ -67,6 +68,7 @@ export function useStationScene(
     legsGroupRef.current = groups.legsGroup;
     monitorsGroupRef.current = groups.monitorsGroup;
     accessoriesGroupRef.current = groups.accessoriesGroup;
+    chairGroupRef.current = groups.chairGroup;
     ergonomicsGroupRef.current = groups.ergoGroup;
     deskLightRef.current = groups.deskSpot;
 
@@ -105,9 +107,8 @@ export function useStationScene(
         }
       }
 
-      // Update target focus center slightly based on height
-      targetCenterRef.current.y = h * 0.6 + 0.35;
-      updateCamera(cameraRef.current);
+      // Update camera position tracking elevated table height
+      updateCamera(cameraRef.current, h);
 
       renderer.render(scene, camera);
     };
@@ -137,10 +138,13 @@ export function useStationScene(
 
   return {
     sceneRef,
+    cameraRef,
+    rendererRef,
     movingDeskGroupRef,
     legsGroupRef,
     monitorsGroupRef,
     accessoriesGroupRef,
+    chairGroupRef,
     ergonomicsGroupRef,
     tabletopMeshRef,
     deskLightRef,

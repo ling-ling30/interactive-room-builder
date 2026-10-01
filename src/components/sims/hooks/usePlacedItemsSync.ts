@@ -101,14 +101,15 @@ export function usePlacedItemsSync({
 
       const safeGridX = typeof item.gridX === 'number' && !isNaN(item.gridX) ? item.gridX : 0;
       const safeGridZ = typeof item.gridZ === 'number' && !isNaN(item.gridZ) ? item.gridZ : 0;
-      let safeSurfaceY = typeof item.surfaceY === 'number' && !isNaN(item.surfaceY) ? item.surfaceY : 0;
+      let safeSurfaceY = 0;
       const safeRotation = typeof item.rotation === 'number' && !isNaN(item.rotation) ? item.rotation : 0;
 
       const fp = getEffectiveFootprint(product, safeRotation);
 
-      // Dynamically measure physical desk surface height so accessories never sink
-      // Because desks are placed in Pass 1, deskMesh is guaranteed to be in world position!
+      // Floor furniture (desks, tables, chairs, bookshelves, rugs, plants) ALWAYS rests flat on the floor (Y = 0).
+      // Only surface items (items resting ON a desk/table, like laptops, monitors, mousepads, lamps) use surfaceY.
       if (isSurfaceItem(product)) {
+        safeSurfaceY = typeof item.surfaceY === 'number' && !isNaN(item.surfaceY) ? item.surfaceY : 0;
         const detected = getTableSurfaceYUnder(
           safeGridX,
           safeGridZ,
@@ -125,6 +126,8 @@ export function usePlacedItemsSync({
         if (detected.surfaceY > 0) {
           safeSurfaceY = detected.surfaceY;
         }
+      } else {
+        safeSurfaceY = 0;
       }
 
       const worldPos = gridToWorld(safeGridX, safeGridZ, fp.width, fp.depth, roomWidth, roomLength);

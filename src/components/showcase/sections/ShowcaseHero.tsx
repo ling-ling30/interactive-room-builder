@@ -4,9 +4,14 @@ import { ArrowRight, ArrowUpRight, Sparkles, MessageCircle, Box, Footprints, Sli
 interface ShowcaseHeroProps {
   onToggleInteractiveWorld: () => void;
   onWalkInStudio?: () => void;
+  onOpenDeskStudio?: () => void;
 }
 
-export const ShowcaseHero: React.FC<ShowcaseHeroProps> = ({ onToggleInteractiveWorld, onWalkInStudio }) => (
+export const ShowcaseHero: React.FC<ShowcaseHeroProps> = ({
+  onToggleInteractiveWorld,
+  onWalkInStudio,
+  onOpenDeskStudio,
+}) => (
   <header className="pt-28 pb-16 sm:pt-36 sm:pb-24 px-4 sm:px-6 bg-gradient-to-b from-white to-slate-50 border-b border-slate-200/70">
     <div className="max-w-5xl mx-auto text-center flex flex-col items-center">
       {/* Bali Villa Delivery Badge */}
@@ -31,13 +36,22 @@ export const ShowcaseHero: React.FC<ShowcaseHeroProps> = ({ onToggleInteractiveW
 
       {/* Action Triggers */}
       <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+        {onOpenDeskStudio && (
+          <button
+            onClick={onOpenDeskStudio}
+            className="apple-press group w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-slate-950 group-hover:rotate-12 transition-transform duration-300" />
+            <span>Build Desk Studio (3D)</span>
+            <ArrowRight className="w-4 h-4 text-slate-900 group-hover:translate-x-1 transition-transform" />
+          </button>
+        )}
+
         <button
           onClick={onToggleInteractiveWorld}
-          className="apple-press group w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+          className="apple-press group w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-slate-950 hover:bg-black text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
-          <Sparkles className="w-4 h-4 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
-          <span>Design Room in 3D</span>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+          <span>Room Builder</span>
         </button>
 
         {onWalkInStudio && (

@@ -1,53 +1,57 @@
 import * as THREE from 'three';
 
-/** Adds studio 3-point lighting, floor, pedestal grid and contact-shadow disc. */
+/** Adds studio lighting, warm architectural floor, pedestal grid and contact-shadow disc. */
 export function addStudioEnvironment(scene: THREE.Scene) {
-  scene.background = new THREE.Color(0x0c0f17);
-  scene.fog = new THREE.Fog(0x0c0f17, 3.5, 9);
+  // Warm Bali linen/cream architectural backdrop matching the landing page and 3D studio
+  scene.background = new THREE.Color(0xf0ece1);
+  scene.fog = new THREE.Fog(0xf0ece1, 5, 14);
 
-  // Studio 3-Point Lighting
-  scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+  // Warm Studio Daylight 3-Point Lighting
+  scene.add(new THREE.AmbientLight(0xfffaf2, 1.4));
 
-  const keyLight = new THREE.DirectionalLight(0xfff8ee, 1.8);
-  keyLight.position.set(2.5, 3.8, 2.2);
+  // Warm Sun Key Light
+  const keyLight = new THREE.DirectionalLight(0xffedd5, 1.8);
+  keyLight.position.set(2.8, 4.2, 2.4);
   keyLight.castShadow = true;
   keyLight.shadow.mapSize.width = 2048;
   keyLight.shadow.mapSize.height = 2048;
-  keyLight.shadow.bias = -0.0005;
+  keyLight.shadow.bias = -0.0003;
   keyLight.shadow.camera.near = 0.5;
-  keyLight.shadow.camera.far = 10;
-  keyLight.shadow.camera.left = -1.8;
-  keyLight.shadow.camera.right = 1.8;
-  keyLight.shadow.camera.top = 1.8;
-  keyLight.shadow.camera.bottom = -1.8;
+  keyLight.shadow.camera.far = 12;
+  keyLight.shadow.camera.left = -2.2;
+  keyLight.shadow.camera.right = 2.2;
+  keyLight.shadow.camera.top = 2.2;
+  keyLight.shadow.camera.bottom = -2.2;
   scene.add(keyLight);
 
-  const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.9);
-  fillLight.position.set(-2.5, 2.2, -1.5);
+  // Soft Warm Daylight Fill
+  const fillLight = new THREE.DirectionalLight(0xfffaed, 0.85);
+  fillLight.position.set(-2.8, 2.5, -1.8);
   scene.add(fillLight);
 
-  const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.7);
-  rimLight.position.set(0, 2.5, -2.8);
+  // Warm Sun Rim / Edge Light
+  const rimLight = new THREE.DirectionalLight(0xfff5ea, 0.55);
+  rimLight.position.set(0, 3.0, -3.0);
   scene.add(rimLight);
 
-  // Floor Platform
+  // Floor Platform (warm birch/light oak material matching the villa studio)
   const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(10, 10),
-    new THREE.MeshStandardMaterial({ color: 0x111520, roughness: 0.85, metalness: 0.1 })
+    new THREE.PlaneGeometry(16, 16),
+    new THREE.MeshStandardMaterial({ color: 0xede8dc, roughness: 0.65, metalness: 0.05 })
   );
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  // Floor Pedestal Grid Ring
-  const gridHelper = new THREE.GridHelper(4.5, 18, 0x1e2638, 0x151a26);
+  // Floor Pedestal Grid Ring (subtle warm sand architectural lines)
+  const gridHelper = new THREE.GridHelper(5, 20, 0xd8d1c2, 0xe4ded3);
   gridHelper.position.y = 0.001;
   scene.add(gridHelper);
 
-  // Ambient Contact Shadow Disc underneath the desk
+  // Ambient Contact Shadow Disc underneath the desk (soft warm contact shadow)
   const shadowDisc = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.4, 1.6),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45 })
+    new THREE.PlaneGeometry(2.6, 1.8),
+    new THREE.MeshBasicMaterial({ color: 0x4a4036, transparent: true, opacity: 0.22 })
   );
   shadowDisc.rotation.x = -Math.PI / 2;
   shadowDisc.position.set(0, 0.003, 0);
@@ -59,11 +63,12 @@ export interface StationGroups {
   legsGroup: THREE.Group;
   monitorsGroup: THREE.Group;
   accessoriesGroup: THREE.Group;
+  chairGroup: THREE.Group;
   ergoGroup: THREE.Group;
   deskSpot: THREE.SpotLight;
 }
 
-/** Creates the groups the station geometry is rebuilt into (moving desk top, legs, ergonomics guide) and the desk spotlight. */
+/** Creates the groups the station geometry is rebuilt into (moving desk top, legs, ergonomics guide, chair) and the desk spotlight. */
 export function createStationGroups(scene: THREE.Scene): StationGroups {
   const movingGroup = new THREE.Group();
   scene.add(movingGroup);
@@ -77,6 +82,10 @@ export function createStationGroups(scene: THREE.Scene): StationGroups {
   const accessoriesGroup = new THREE.Group();
   movingGroup.add(accessoriesGroup);
 
+  const chairGroup = new THREE.Group();
+  chairGroup.name = 'chairGroup';
+  scene.add(chairGroup);
+
   const ergoGroup = new THREE.Group();
   scene.add(ergoGroup);
 
@@ -87,7 +96,7 @@ export function createStationGroups(scene: THREE.Scene): StationGroups {
   movingGroup.add(deskSpot);
   movingGroup.add(deskSpot.target);
 
-  return { movingGroup, legsGroup, monitorsGroup, accessoriesGroup, ergoGroup, deskSpot };
+  return { movingGroup, legsGroup, monitorsGroup, accessoriesGroup, chairGroup, ergoGroup, deskSpot };
 }
 
 /** Removes every child of `group` (geometry/materials are left to GC like before). */

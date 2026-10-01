@@ -26,25 +26,29 @@ export const buildStandingDesk: ModelBuilder = ({ group, product, primaryMat, da
 
   // Telescoping Motorized Legs (Left and Right)
   const legInset = Math.min(0.2, width * 0.16);
+  const legSpanH = Math.max(0.4, height - topThick - 0.03);
+  const lowerH = Math.max(0.35, legSpanH * 0.52);
+  const upperH = Math.max(0.38, legSpanH * 0.55);
+
   [-width / 2 + legInset, width / 2 - legInset].forEach(x => {
-    // Upper sleeve
-    const legUpper = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.1), darkMetal);
-    legUpper.position.set(x, height - 0.22, 0);
-    legUpper.castShadow = true;
-    group.add(legUpper);
-
-    // Lower column
-    const legLower = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.38, 0.09), darkMetal);
-    legLower.position.set(x, 0.19, 0);
-    legLower.castShadow = true;
-    group.add(legLower);
-
     // Floor foot bar
     const foot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, depth * 0.8), darkMetal);
     foot.position.set(x, 0.015, 0);
     foot.castShadow = true;
     foot.receiveShadow = true;
     group.add(foot);
+
+    // Lower column anchored directly to foot bar
+    const legLower = new THREE.Mesh(new THREE.BoxGeometry(0.07, lowerH, 0.09), darkMetal);
+    legLower.position.set(x, 0.03 + lowerH / 2, 0);
+    legLower.castShadow = true;
+    group.add(legLower);
+
+    // Upper sleeve telescoping down from tabletop
+    const legUpper = new THREE.Mesh(new THREE.BoxGeometry(0.08, upperH, 0.1), darkMetal);
+    legUpper.position.set(x, height - topThick - upperH / 2, 0);
+    legUpper.castShadow = true;
+    group.add(legUpper);
   });
 };
 

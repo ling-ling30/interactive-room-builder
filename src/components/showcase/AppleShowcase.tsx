@@ -15,6 +15,7 @@ interface AppleShowcaseProps {
   onToggleInteractiveWorld: () => void;
   onOpenAdmin: () => void;
   onWalkInStudio?: () => void;
+  onOpenDeskStudio?: () => void;
   onSelectSetup: (setup: RoomSetup) => void;
   setups: RoomSetup[];
   catalog: SimsProduct[];
@@ -24,6 +25,7 @@ export const AppleShowcase: React.FC<AppleShowcaseProps> = ({
   onToggleInteractiveWorld,
   onOpenAdmin,
   onWalkInStudio,
+  onOpenDeskStudio,
   onSelectSetup,
   setups,
   catalog,
@@ -33,8 +35,13 @@ export const AppleShowcase: React.FC<AppleShowcaseProps> = ({
       onToggleInteractiveWorld={onToggleInteractiveWorld}
       onOpenAdmin={onOpenAdmin}
       onWalkInStudio={onWalkInStudio}
+      onOpenDeskStudio={onOpenDeskStudio}
     />
-    <ShowcaseHero onToggleInteractiveWorld={onToggleInteractiveWorld} onWalkInStudio={onWalkInStudio} />
+    <ShowcaseHero
+      onToggleInteractiveWorld={onToggleInteractiveWorld}
+      onWalkInStudio={onWalkInStudio}
+      onOpenDeskStudio={onOpenDeskStudio}
+    />
     <SetupBundles setups={setups} catalog={catalog} onSelectSetup={onSelectSetup} />
     <ValueProps />
     <EquipmentFleet catalog={catalog} onToggleInteractiveWorld={onToggleInteractiveWorld} />

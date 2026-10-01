@@ -4,6 +4,7 @@ import { renderVideoEditorScreen } from './screens/videoEditorScreen';
 import { renderCodeIdeScreen } from './screens/codeIdeScreen';
 import { renderAnalyticsScreen } from './screens/analyticsScreen';
 import { renderNatureWallpaperScreen } from './screens/natureWallpaperScreen';
+import { renderCyberTerminalScreen } from './screens/cyberTerminalScreen';
 
 // Cache generated textures so switching is instantaneous
 const textureCache = new Map<string, THREE.CanvasTexture>();
@@ -33,6 +34,9 @@ export function getVirtualScreenTexture(theme: VirtualScreenTheme, width = 1024,
       break;
     case 'analytics':
       renderAnalyticsScreen(ctx, width, height);
+      break;
+    case 'cyber_terminal':
+      renderCyberTerminalScreen(ctx, width, height);
       break;
     case 'nature_wallpaper':
     default:
